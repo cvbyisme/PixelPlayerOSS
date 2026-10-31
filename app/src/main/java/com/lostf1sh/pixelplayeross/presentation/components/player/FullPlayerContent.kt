@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -2560,6 +2561,12 @@ private fun PlayerVolumeLabel(
         context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
     }
     var volumePercent by remember { mutableIntStateOf(readMusicVolumePercent(audioManager)) }
+    // Small pop each time the level changes, so the number is noticeable without a slider.
+    val pulse = remember { Animatable(1f) }
+    LaunchedEffect(volumePercent) {
+        pulse.snapTo(1.12f)
+        pulse.animateTo(1f, animationSpec = tween(220, easing = FastOutSlowInEasing))
+    }
 
     DisposableEffect(audioManager, context) {
         if (audioManager == null) return@DisposableEffect onDispose { }
@@ -2581,12 +2588,32 @@ private fun PlayerVolumeLabel(
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = volumePercent.toString(),
-            style = MaterialTheme.typography.labelLargeEmphasized,
-            fontWeight = FontWeight.Bold,
-            color = accentColor,
-            maxLines = 1
-        )
+        Box(
+            modifier = Modifier.graphicsLayer {
+                val scale = pulse.value
+                scaleX = scale
+                scaleY = scale
+            }
+        ) {
+            AnimatedContent(
+                targetState = volumePercent,
+                transitionSpec = {
+                    val movingUp = targetState > initialState
+                    (slideInVertically(animationSpec = tween(160)) { height -> if (movingUp) height else -height } +
+                        fadeIn(animationSpec = tween(160))) togetherWith
+                        (slideOutVertically(animationSpec = tween(160)) { height -> if (movingUp) -height else height } +
+                            fadeOut(animationSpec = tween(160)))
+                },
+                label = "playerVolume"
+            ) { value ->
+                Text(
+                    text = value.toString(),
+                    style = MaterialTheme.typography.labelLargeEmphasized,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                    maxLines = 1
+                )
+            }
+        }
     }
 }

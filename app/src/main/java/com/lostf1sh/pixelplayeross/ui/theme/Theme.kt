@@ -40,11 +40,13 @@ val LocalShowScrollbar = staticCompositionLocalOf { true }
  * `surfaceContainer*` / `surfaceVariant`, which stay opaque and would cover the image.
  */
 fun ColorScheme.withTranslucentSurfaces(
-    backgroundAlpha: Float = 0.10f,
+    backgroundAlpha: Float = 0.0f,
     containerAlpha: Float = 0.45f
 ): ColorScheme = copy(
+    // The wallpaper layer already paints its own dim scrim, so page-level background fills are
+    // fully transparent: any extra veil here would hide the picture the user picked.
     background = background.copy(alpha = backgroundAlpha),
-    surface = surface.copy(alpha = backgroundAlpha + 0.12f),
+    surface = surface.copy(alpha = backgroundAlpha),
     surfaceDim = surfaceDim.copy(alpha = backgroundAlpha),
     surfaceBright = surfaceBright.copy(alpha = containerAlpha + 0.1f),
     surfaceContainerLowest = surfaceContainerLowest.copy(alpha = backgroundAlpha),

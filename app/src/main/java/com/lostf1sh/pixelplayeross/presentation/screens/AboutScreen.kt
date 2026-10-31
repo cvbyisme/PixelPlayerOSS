@@ -319,6 +319,15 @@ fun AboutScreen(
                 )
             }
 
+            item(key = "build_card") {
+                AboutBuildCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .padding(top = 12.dp),
+                )
+            }
+
             item(key = "support_card") {
                 AboutSupportCard(
                     onSponsorClick = { openUrl(context, SponsorUrl) },
@@ -524,6 +533,100 @@ private fun CommunitySignalsRow() {
                     )
                 }
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AboutBuildCard(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val shape = AbsoluteSmoothCornerShape(30.dp, 60)
+    val changes = listOf(
+        stringResource(R.string.about_build_change_background),
+        stringResource(R.string.about_build_change_transparency),
+        stringResource(R.string.about_build_change_volume),
+        stringResource(R.string.about_build_change_signing),
+    )
+
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 18.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.AutoAwesome,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = stringResource(R.string.about_build_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            Text(
+                text = stringResource(R.string.about_build_maintainer),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            Text(
+                text = stringResource(R.string.about_build_site),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable { openUrl(context, "https://github.com/cvbyisme") }
+                    .padding(vertical = 2.dp),
+            )
+
+            Text(
+                text = stringResource(R.string.about_build_changes_title),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                changes.forEach { change ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text = change,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.about_build_license_note),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            )
         }
     }
 }

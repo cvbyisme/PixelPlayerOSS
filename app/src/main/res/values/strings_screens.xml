@@ -304,4 +304,13 @@
     <string name="cd_toggle_grid_list">Toggle grid/list view</string>
     <string name="cd_genre_illustration">Genre illustration</string>
     <string name="dash_last_synced_format">Last synced: %1$s</string>
+    <string name="about_build_title">Personal build</string>
+    <string name="about_build_maintainer">Maintained by cvby — unofficial fork with a few extra features.</string>
+    <string name="about_build_site">github.com/cvbyisme</string>
+    <string name="about_build_changes_title">Changes in this build</string>
+    <string name="about_build_change_background">Custom app background: pick any picture, with adjustable blur and dim</string>
+    <string name="about_build_change_transparency">Page background veils removed so the picture stays visible</string>
+    <string name="about_build_change_volume">Numeric media volume in the now-playing top bar</string>
+    <string name="about_build_change_signing">Signed with a personal release key</string>
+    <string name="about_build_license_note">Based on PixelPlayerOSS by @lostf1sh. GPL-3.0, which also covers these changes.</string>
 </resources>

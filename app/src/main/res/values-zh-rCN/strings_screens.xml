@@ -298,4 +298,13 @@
     <string name="cd_toggle_grid_list">切换网格/列表视图</string>
     <string name="cd_genre_illustration">流派配图</string>
     <string name="dash_last_synced_format">上次同步：%1$s</string>
+    <string name="about_build_title">个人修改版</string>
+    <string name="about_build_maintainer">维护：cvby（非官方分支，自行加了部分功能）</string>
+    <string name="about_build_site">github.com/cvbyisme</string>
+    <string name="about_build_changes_title">本版改动</string>
+    <string name="about_build_change_background">全局自定义背景：相册选图，可调模糊与暗化</string>
+    <string name="about_build_change_transparency">取消界面背景遮罩，壁纸不再被挡住</string>
+    <string name="about_build_change_volume">播放页顶部显示媒体音量数字</string>
+    <string name="about_build_change_signing">使用个人发布密钥签名</string>
+    <string name="about_build_license_note">基于 @lostf1sh 的 PixelPlayerOSS，GPL-3.0 许可，本版改动同样遵循 GPL-3.0。</string>
 </resources>
