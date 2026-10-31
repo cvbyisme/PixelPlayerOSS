@@ -1,5 +1,6 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import android.os.Build
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -33,6 +34,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.shadow
@@ -91,6 +98,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerSheetState
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.StablePlayerState
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerAmoledTheme
+import com.lostf1sh.pixelplayeross.ui.theme.LocalPlayerUiConfig
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -609,6 +617,8 @@ fun UnifiedPlayerSheetV2(
     if (!actuallyShowSheetContent) return
 
     val sheetResources = LocalResources.current
+    val playerUiConfig = LocalPlayerUiConfig.current
+    val coverBackgroundUri = infrequentPlayerState.currentSong?.albumArtUriString
     val currentSongTitle = infrequentPlayerState.currentSong?.title
     val playerSheetSemanticsDescription = remember(
         sheetResources,
@@ -674,7 +684,11 @@ fun UnifiedPlayerSheetV2(
                                 clip = false
                             )
                             .background(
-                                color = playerAreaBackground,
+                                // A blurred cover paints itself inside the card, so the themed
+                                // fill would only muddy it; fall back to it otherwise.
+                                color = if (playerUiConfig.blurredCoverBackground &&
+                                    !coverBackgroundUri.isNullOrBlank()
+                                ) Color.Transparent else playerAreaBackground,
                                 shape = sheetInteractionState.playerShadowShape
                             )
                             .clip(sheetInteractionState.playerShadowShape)
@@ -703,6 +717,16 @@ fun UnifiedPlayerSheetV2(
                                 testTag = playerSheetTestTag(currentSheetContentState)
                             }
                     ) {
+                        if (playerUiConfig.blurredCoverBackground ||
+                            playerUiConfig.backgroundScrimPercent > 0
+                        ) {
+                            PlayerSheetBackdrop(
+                                albumArtUri = coverBackgroundUri,
+                                blurCover = playerUiConfig.blurredCoverBackground,
+                                scrimPercent = playerUiConfig.backgroundScrimPercent,
+                                modifier = Modifier.matchParentSize()
+                            )
+                        }
                         // Measures the player content at the full container height and, while
                         // the player is expanding or expanded, at the sheet's full width, so the
                         // full player keeps a stable layout across the transition and the card
@@ -830,4 +854,43 @@ fun UnifiedPlayerSheetV2(
         pendingOverlay = pendingSaveQueueOverlay,
         onDismissOverlay = { sheetModalOverlayController.dismissSaveQueueOverlay() }
     )
+}
+
+/**
+ * Optional player-sheet backdrop: the current cover, blurred, with a user-tuned dark scrim on top
+ * so the foreground text and controls stay readable.
+ */
+@Composable
+private fun PlayerSheetBackdrop(
+    albumArtUri: String?,
+    blurCover: Boolean,
+    scrimPercent: Int,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    Box(modifier = modifier) {
+        if (blurCover && !albumArtUri.isNullOrBlank()) {
+            val imageModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Modifier.fillMaxSize().blur(48.dp)
+            } else {
+                Modifier.fillMaxSize()
+            }
+            AsyncImage(
+                model = ImageRequest.Builder(context)
+                    .data(albumArtUri)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = imageModifier
+            )
+        }
+        if (scrimPercent > 0) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = (scrimPercent / 100f).coerceIn(0f, 1f)))
+            )
+        }
+    }
 }

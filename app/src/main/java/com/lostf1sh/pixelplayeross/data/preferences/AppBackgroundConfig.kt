@@ -10,7 +10,11 @@ data class AppBackgroundConfig(
     val enabled: Boolean = false,
     val imagePath: String? = null,
     val blurRadius: Int = DEFAULT_BLUR,
-    val dimPercent: Int = DEFAULT_DIM
+    val dimPercent: Int = DEFAULT_DIM,
+    /** Opacity of page-level background fills (0 = fully see-through). */
+    val backgroundOpacity: Int = DEFAULT_BACKGROUND_OPACITY,
+    /** Opacity of cards, panels and sheets. */
+    val containerOpacity: Int = DEFAULT_CONTAINER_OPACITY
 ) {
     /** True only when the user turned the feature on and a usable image is stored. */
     val isActive: Boolean get() = enabled && !imagePath.isNullOrBlank()
@@ -22,9 +26,15 @@ data class AppBackgroundConfig(
         const val DEFAULT_DIM = 40
         const val MAX_BLUR = 40
         const val MAX_DIM = 85
+        /** Percent opacity for page backgrounds (0 = fully see-through). */
+        const val DEFAULT_BACKGROUND_OPACITY = 0
+        /** Percent opacity for cards, panels and sheets. */
+        const val DEFAULT_CONTAINER_OPACITY = 45
+        const val MAX_OPACITY = 100
 
         fun clampBlur(value: Int): Int = value.coerceIn(0, MAX_BLUR)
 
         fun clampDim(value: Int): Int = value.coerceIn(0, MAX_DIM)
+        fun clampOpacity(value: Int): Int = value.coerceIn(0, MAX_OPACITY)
     }
 }

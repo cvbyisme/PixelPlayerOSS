@@ -404,4 +404,18 @@
     <string name="setcat_custom_background_dim_title">Dim</string>
     <string name="setcat_custom_background_clear_title">Remove Background</string>
     <string name="setcat_custom_background_clear_desc">Delete the stored image and restore the default look</string>
+
+    <string name="setcat_player_appearance">Player appearance</string>
+    <string name="setcat_custom_background_page_opacity_title">Page background opacity</string>
+    <string name="setcat_custom_background_card_opacity_title">Cards &amp; panels opacity</string>
+    <string name="setcat_player_cover_tap_lyrics_title">Tap cover to open lyrics</string>
+    <string name="setcat_player_cover_tap_lyrics_subtitle">Tapping the album art in the player opens the lyrics panel instead of the album page</string>
+    <string name="setcat_player_blurred_cover_bg_title">Use blurred cover as background</string>
+    <string name="setcat_player_blurred_cover_bg_subtitle">Blur the current song&#39;s cover and paint it behind the player controls</string>
+    <string name="setcat_player_scrim_title">Player background scrim</string>
+    <string name="setcat_player_controls_style_label">Control buttons style</string>
+    <string name="setcat_player_controls_style_desc">Colour treatment for play, pause and skip buttons</string>
+    <string name="setcat_player_controls_style_default">Expressive</string>
+    <string name="setcat_player_controls_style_accent">Accent</string>
+    <string name="setcat_player_controls_style_mono">Mono</string>
 </resources>

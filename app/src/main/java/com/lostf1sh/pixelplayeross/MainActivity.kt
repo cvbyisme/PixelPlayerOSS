@@ -110,6 +110,7 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.NavBarStyle
 import com.lostf1sh.pixelplayeross.data.preferences.sanitizeNavBarCornerRadius
@@ -306,6 +307,8 @@ class MainActivity : ComponentActivity() {
             val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
             val appBackground by themePreferencesRepository.appBackgroundFlow
                 .collectAsStateWithLifecycle(initialValue = AppBackgroundConfig())
+            val playerUiConfig by themePreferencesRepository.playerUiConfigFlow
+                .collectAsStateWithLifecycle(initialValue = PlayerUiConfig())
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -391,7 +394,8 @@ class MainActivity : ComponentActivity() {
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme,
                 themePreset = themePreset,
-                appBackground = appBackground
+                appBackground = appBackground,
+                playerUiConfig = playerUiConfig
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(

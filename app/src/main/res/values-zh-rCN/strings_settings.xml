@@ -387,4 +387,18 @@
     <string name="setcat_custom_background_dim_title">暗化程度</string>
     <string name="setcat_custom_background_clear_title">移除背景</string>
     <string name="setcat_custom_background_clear_desc">删除已保存的图片并恢复默认外观</string>
+
+    <string name="setcat_player_appearance">播放器外观</string>
+    <string name="setcat_custom_background_page_opacity_title">页面背景不透明度</string>
+    <string name="setcat_custom_background_card_opacity_title">卡片/面板不透明度</string>
+    <string name="setcat_player_cover_tap_lyrics_title">点击封面打开歌词</string>
+    <string name="setcat_player_cover_tap_lyrics_subtitle">在播放页点击专辑封面时打开歌词面板，而不是专辑详情</string>
+    <string name="setcat_player_blurred_cover_bg_title">使用模糊封面作为背景</string>
+    <string name="setcat_player_blurred_cover_bg_subtitle">将当前歌曲封面模糊后作为播放页背景</string>
+    <string name="setcat_player_scrim_title">播放器背景蒙版</string>
+    <string name="setcat_player_controls_style_label">播控按钮样式</string>
+    <string name="setcat_player_controls_style_desc">播放、暂停与切歌按钮的配色方案</string>
+    <string name="setcat_player_controls_style_default">表现色</string>
+    <string name="setcat_player_controls_style_accent">强调色</string>
+    <string name="setcat_player_controls_style_mono">单色</string>
 </resources>

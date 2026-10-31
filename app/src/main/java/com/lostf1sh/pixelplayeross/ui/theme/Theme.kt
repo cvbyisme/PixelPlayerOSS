@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import androidx.core.graphics.ColorUtils
@@ -185,6 +186,7 @@ fun PixelPlayerTheme(
     colorSchemePairOverride: ColorSchemePair? = null,
     themePreset: String = ThemePreset.DEFAULT,
     appBackground: AppBackgroundConfig = AppBackgroundConfig(),
+    playerUiConfig: PlayerUiConfig = PlayerUiConfig(),
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -208,7 +210,10 @@ fun PixelPlayerTheme(
     }
 
     val appliedColorScheme = if (appBackground.isActive) {
-        finalColorScheme.withTranslucentSurfaces()
+        finalColorScheme.withTranslucentSurfaces(
+            backgroundAlpha = appBackground.backgroundOpacity / 100f,
+            containerAlpha = appBackground.containerOpacity / 100f
+        )
     } else {
         finalColorScheme
     }
@@ -219,7 +224,8 @@ fun PixelPlayerTheme(
     CompositionLocalProvider(
         LocalPixelPlayerDarkTheme provides (darkTheme || isAmoled),
         LocalPixelPlayerAmoledTheme provides isAmoled,
-        LocalAppBackground provides appBackground
+        LocalAppBackground provides appBackground,
+        LocalPlayerUiConfig provides playerUiConfig
     ) {
         MaterialTheme(
             colorScheme = appliedColorScheme,

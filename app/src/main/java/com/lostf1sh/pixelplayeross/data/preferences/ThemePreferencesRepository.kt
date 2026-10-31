@@ -26,6 +26,12 @@ class ThemePreferencesRepository @Inject constructor(
         val APP_BACKGROUND_PATH = stringPreferencesKey("app_background_path_v1")
         val APP_BACKGROUND_BLUR = intPreferencesKey("app_background_blur_v1")
         val APP_BACKGROUND_DIM = intPreferencesKey("app_background_dim_v1")
+        val APP_BACKGROUND_OPACITY = intPreferencesKey("app_background_opacity_v1")
+        val APP_CONTAINER_OPACITY = intPreferencesKey("app_container_opacity_v1")
+        val PLAYER_COVER_TAP_LYRICS = booleanPreferencesKey("player_cover_tap_lyrics_v1")
+        val PLAYER_BLURRED_COVER_BG = booleanPreferencesKey("player_blurred_cover_bg_v1")
+        val PLAYER_BG_SCRIM = intPreferencesKey("player_bg_scrim_v1")
+        val PLAYER_CONTROLS_STYLE = stringPreferencesKey("player_controls_style_v1")
     }
 
     /** Custom app-wide background image, plus its blur and dim tuning. */
@@ -38,7 +44,26 @@ class ThemePreferencesRepository @Inject constructor(
             ),
             dimPercent = AppBackgroundConfig.clampDim(
                 preferences[Keys.APP_BACKGROUND_DIM] ?: AppBackgroundConfig.DEFAULT_DIM
+            ),
+            backgroundOpacity = AppBackgroundConfig.clampOpacity(
+                preferences[Keys.APP_BACKGROUND_OPACITY] ?: AppBackgroundConfig.DEFAULT_BACKGROUND_OPACITY
+            ),
+            containerOpacity = AppBackgroundConfig.clampOpacity(
+                preferences[Keys.APP_CONTAINER_OPACITY] ?: AppBackgroundConfig.DEFAULT_CONTAINER_OPACITY
             )
+        )
+    }
+
+    /** Now-playing screen look: cover tap action, background treatment and button palette. */
+    val playerUiConfigFlow: Flow<PlayerUiConfig> = dataStore.data.map { preferences ->
+        PlayerUiConfig(
+            coverTapOpensLyrics = preferences[Keys.PLAYER_COVER_TAP_LYRICS] ?: false,
+            blurredCoverBackground = preferences[Keys.PLAYER_BLURRED_COVER_BG] ?: false,
+            backgroundScrimPercent = (preferences[Keys.PLAYER_BG_SCRIM]
+                ?: PlayerUiConfig().backgroundScrimPercent).coerceIn(0, PlayerUiConfig.MAX_SCRIM),
+            controlsStyle = preferences[Keys.PLAYER_CONTROLS_STYLE]
+                ?.takeIf { it in PlayerControlsStyle.values }
+                ?: PlayerControlsStyle.DEFAULT
         )
     }
 
@@ -107,6 +132,37 @@ class ThemePreferencesRepository @Inject constructor(
     suspend fun setAppBackgroundDim(percent: Int) =
         dataStore.edit { preferences ->
             preferences[Keys.APP_BACKGROUND_DIM] = AppBackgroundConfig.clampDim(percent)
+        }
+
+    suspend fun setAppBackgroundOpacity(percent: Int) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_BACKGROUND_OPACITY] = AppBackgroundConfig.clampOpacity(percent)
+        }
+
+    suspend fun setAppContainerOpacity(percent: Int) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_CONTAINER_OPACITY] = AppBackgroundConfig.clampOpacity(percent)
+        }
+
+    suspend fun setPlayerCoverTapOpensLyrics(enabled: Boolean) =
+        dataStore.edit { preferences ->
+            preferences[Keys.PLAYER_COVER_TAP_LYRICS] = enabled
+        }
+
+    suspend fun setPlayerBlurredCoverBackground(enabled: Boolean) =
+        dataStore.edit { preferences ->
+            preferences[Keys.PLAYER_BLURRED_COVER_BG] = enabled
+        }
+
+    suspend fun setPlayerBackgroundScrim(percent: Int) =
+        dataStore.edit { preferences ->
+            preferences[Keys.PLAYER_BG_SCRIM] = percent.coerceIn(0, PlayerUiConfig.MAX_SCRIM)
+        }
+
+    suspend fun setPlayerControlsStyle(style: String) =
+        dataStore.edit { preferences ->
+            preferences[Keys.PLAYER_CONTROLS_STYLE] =
+                if (style in PlayerControlsStyle.values) style else PlayerControlsStyle.DEFAULT
         }
 
 

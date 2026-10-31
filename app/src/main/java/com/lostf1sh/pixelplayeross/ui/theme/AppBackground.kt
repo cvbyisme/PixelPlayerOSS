@@ -15,10 +15,14 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
 import java.io.File
 
 /** Current custom background configuration, exposed so screens can opt into a transparent root. */
 val LocalAppBackground = staticCompositionLocalOf { AppBackgroundConfig() }
+
+/** Now-playing screen appearance preferences, exposed so the player sheet can honour them. */
+val LocalPlayerUiConfig = staticCompositionLocalOf { PlayerUiConfig() }
 
 /**
  * Draws the user's custom background image behind the app content: a cover-cropped image with an

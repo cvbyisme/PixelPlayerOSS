@@ -129,7 +129,9 @@ import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
 import com.lostf1sh.pixelplayeross.data.preferences.FullPlayerLoadingTweaks
 import com.lostf1sh.pixelplayeross.presentation.components.AlbumCarouselSection
 import com.lostf1sh.pixelplayeross.presentation.components.AutoScrollingTextOnDemand
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsStyle
 import com.lostf1sh.pixelplayeross.presentation.components.LocalMaterialTheme
+import com.lostf1sh.pixelplayeross.ui.theme.LocalPlayerUiConfig
 import com.lostf1sh.pixelplayeross.presentation.components.LyricsSheet
 import com.lostf1sh.pixelplayeross.presentation.components.scoped.rememberSmoothProgress
 import com.lostf1sh.pixelplayeross.presentation.components.subcomps.FetchLyricsDialog
@@ -315,12 +317,18 @@ fun FullPlayerContent(
     val playerOnBaseColor = LocalMaterialTheme.current.onPrimaryContainer
     val playerAccentColor = LocalMaterialTheme.current.primary
     val playerOnAccentColor = LocalMaterialTheme.current.onPrimary
-    val transportPlayPauseColors = expressivePlayPauseButtonColors(LocalMaterialTheme.current)
-    val transportSkipColors = expressiveSkipButtonColors(LocalMaterialTheme.current)
-    val transportSkipButtonColors = TransportButtonColors(
-        container = playerAccentColor,
-        content = playerOnAccentColor
+    val playerUiConfig = LocalPlayerUiConfig.current
+    val transportPlayPauseColors = styledTransportColors(
+        style = playerUiConfig.controlsStyle,
+        colorScheme = LocalMaterialTheme.current,
+        isPlayPause = true
     )
+    val transportSkipColors = styledTransportColors(
+        style = playerUiConfig.controlsStyle,
+        colorScheme = LocalMaterialTheme.current,
+        isPlayPause = false
+    )
+    val transportSkipButtonColors = transportSkipColors
     val progressActiveColor = playerOnBaseColor
 
     val placeholderColor = playerOnBaseColor.copy(alpha = 0.1f)
@@ -537,7 +545,12 @@ fun FullPlayerContent(
             requestedScrollIndex = pendingCarouselIndex,
             onSongSelected = onAlbumSongSelected,
             onAlbumClick = { albumSong ->
-                playerViewModel.triggerAlbumNavigationFromPlayer(albumSong.albumId)
+                if (playerUiConfig.coverTapOpensLyrics) {
+                    // User prefers the lyrics panel over the album page when tapping the cover.
+                    onLyricsClick()
+                } else {
+                    playerViewModel.triggerAlbumNavigationFromPlayer(albumSong.albumId)
+                }
             },
             modifier = modifier
         )
@@ -2421,6 +2434,32 @@ private data class TransportButtonColors(
     val container: Color,
     val content: Color
 )
+
+/**
+ * Transport button palette. [PlayerControlsStyle.DEFAULT] keeps the Material 3 expressive fixed
+ * tones, [PlayerControlsStyle.ACCENT] paints everything with the album accent, and
+ * [PlayerControlsStyle.MONO] falls back to a muted monochrome treatment.
+ */
+@Composable
+private fun styledTransportColors(
+    style: String,
+    colorScheme: ColorScheme,
+    isPlayPause: Boolean
+): TransportButtonColors = when (style) {
+    PlayerControlsStyle.ACCENT -> TransportButtonColors(
+        container = colorScheme.primary,
+        content = colorScheme.onPrimary
+    )
+    PlayerControlsStyle.MONO -> TransportButtonColors(
+        container = colorScheme.onSurface.copy(alpha = if (isPlayPause) 0.18f else 0.10f),
+        content = colorScheme.onSurface
+    )
+    else -> if (isPlayPause) {
+        expressivePlayPauseButtonColors(colorScheme)
+    } else {
+        expressiveSkipButtonColors(colorScheme)
+    }
+}
 
 private fun expressivePlayPauseButtonColors(colorScheme: ColorScheme): TransportButtonColors {
     return TransportButtonColors(

@@ -16,6 +16,8 @@ import com.lostf1sh.pixelplayeross.data.backup.model.RestoreResult
 import com.lostf1sh.pixelplayeross.data.backup.model.ValidationError
 import com.lostf1sh.pixelplayeross.data.model.AudioOutputMode
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsStyle
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
 import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
@@ -72,6 +74,7 @@ data class SettingsUiState(
     val globalNowPlayingThemeEnabled: Boolean = false,
     val themePreset: String = ThemePreset.DEFAULT,
     val appBackground: AppBackgroundConfig = AppBackgroundConfig(),
+    val playerUiConfig: PlayerUiConfig = PlayerUiConfig(),
     val playerThemePreference: String = ThemePreference.ALBUM_ART,
     val albumArtPaletteStyle: AlbumArtPaletteStyle = AlbumArtPaletteStyle.default,
     val albumArtColorAccuracy: Int = AlbumArtColorAccuracy.DEFAULT,
@@ -272,6 +275,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.appBackgroundFlow.collect { background ->
                 _uiState.update { it.copy(appBackground = background) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferencesRepository.playerUiConfigFlow.collect { config ->
+                _uiState.update { it.copy(playerUiConfig = config) }
             }
         }
     }
@@ -654,6 +662,30 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.setAppBackgroundDim(percent)
         }
+    }
+
+    fun setAppBackgroundOpacity(percent: Int) {
+        viewModelScope.launch { themePreferencesRepository.setAppBackgroundOpacity(percent) }
+    }
+
+    fun setAppContainerOpacity(percent: Int) {
+        viewModelScope.launch { themePreferencesRepository.setAppContainerOpacity(percent) }
+    }
+
+    fun setPlayerCoverTapOpensLyrics(enabled: Boolean) {
+        viewModelScope.launch { themePreferencesRepository.setPlayerCoverTapOpensLyrics(enabled) }
+    }
+
+    fun setPlayerBlurredCoverBackground(enabled: Boolean) {
+        viewModelScope.launch { themePreferencesRepository.setPlayerBlurredCoverBackground(enabled) }
+    }
+
+    fun setPlayerBackgroundScrim(percent: Int) {
+        viewModelScope.launch { themePreferencesRepository.setPlayerBackgroundScrim(percent) }
+    }
+
+    fun setPlayerControlsStyle(style: String) {
+        viewModelScope.launch { themePreferencesRepository.setPlayerControlsStyle(style) }
     }
 
     /**

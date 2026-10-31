@@ -168,6 +168,8 @@ import com.lostf1sh.pixelplayeross.data.backup.model.ModuleRestoreDetail
 import com.lostf1sh.pixelplayeross.data.backup.model.RestorePlan
 import com.lostf1sh.pixelplayeross.data.model.AudioOutputMode
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsStyle
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
 import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.CollagePattern
@@ -795,6 +797,22 @@ fun SettingsCategoryScreen(
                                         onValueChange = { settingsViewModel.setAppBackgroundDim(it.toInt()) },
                                         valueText = { "${it.toInt()}%" }
                                     )
+                                    SliderSettingsItem(
+                                        label = stringResource(R.string.setcat_custom_background_page_opacity_title),
+                                        value = uiState.appBackground.backgroundOpacity.toFloat(),
+                                        valueRange = 0f..AppBackgroundConfig.MAX_OPACITY.toFloat(),
+                                        steps = AppBackgroundConfig.MAX_OPACITY - 1,
+                                        onValueChange = { settingsViewModel.setAppBackgroundOpacity(it.toInt()) },
+                                        valueText = { "${it.toInt()}%" }
+                                    )
+                                    SliderSettingsItem(
+                                        label = stringResource(R.string.setcat_custom_background_card_opacity_title),
+                                        value = uiState.appBackground.containerOpacity.toFloat(),
+                                        valueRange = 0f..AppBackgroundConfig.MAX_OPACITY.toFloat(),
+                                        steps = AppBackgroundConfig.MAX_OPACITY - 1,
+                                        onValueChange = { settingsViewModel.setAppContainerOpacity(it.toInt()) },
+                                        valueText = { "${it.toInt()}%" }
+                                    )
                                     SettingsItem(
                                         title = stringResource(R.string.setcat_custom_background_clear_title),
                                         subtitle = stringResource(R.string.setcat_custom_background_clear_desc),
@@ -803,6 +821,46 @@ fun SettingsCategoryScreen(
                                         modifier = Modifier.settingHighlight("item_appearance_custom_background_clear", highlightKey)
                                     )
                                 }
+                            }
+
+                            SettingsSubsection(title = stringResource(R.string.setcat_player_appearance)) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_player_cover_tap_lyrics_title),
+                                    subtitle = stringResource(R.string.setcat_player_cover_tap_lyrics_subtitle),
+                                    checked = uiState.playerUiConfig.coverTapOpensLyrics,
+                                    onCheckedChange = { settingsViewModel.setPlayerCoverTapOpensLyrics(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Style, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_appearance_player_cover_tap_lyrics", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_player_blurred_cover_bg_title),
+                                    subtitle = stringResource(R.string.setcat_player_blurred_cover_bg_subtitle),
+                                    checked = uiState.playerUiConfig.blurredCoverBackground,
+                                    onCheckedChange = { settingsViewModel.setPlayerBlurredCoverBackground(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Contrast, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_appearance_player_blurred_cover_bg", highlightKey)
+                                )
+                                SliderSettingsItem(
+                                    label = stringResource(R.string.setcat_player_scrim_title),
+                                    value = uiState.playerUiConfig.backgroundScrimPercent.toFloat(),
+                                    valueRange = 0f..PlayerUiConfig.MAX_SCRIM.toFloat(),
+                                    steps = PlayerUiConfig.MAX_SCRIM - 1,
+                                    onValueChange = { settingsViewModel.setPlayerBackgroundScrim(it.toInt()) },
+                                    valueText = { "${it.toInt()}%" }
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_player_controls_style_label),
+                                    description = stringResource(R.string.setcat_player_controls_style_desc),
+                                    options = mapOf(
+                                        PlayerControlsStyle.DEFAULT to stringResource(R.string.setcat_player_controls_style_default),
+                                        PlayerControlsStyle.ACCENT to stringResource(R.string.setcat_player_controls_style_accent),
+                                        PlayerControlsStyle.MONO to stringResource(R.string.setcat_player_controls_style_mono)
+                                    ),
+                                    selectedKey = uiState.playerUiConfig.controlsStyle,
+                                    onSelectionChanged = { settingsViewModel.setPlayerControlsStyle(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_appearance_player_controls_style", highlightKey)
+                                )
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_now_playing)) {
