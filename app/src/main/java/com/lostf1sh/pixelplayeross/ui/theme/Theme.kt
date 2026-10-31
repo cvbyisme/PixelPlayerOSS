@@ -40,18 +40,18 @@ val LocalShowScrollbar = staticCompositionLocalOf { true }
  * `surfaceContainer*` / `surfaceVariant`, which stay opaque and would cover the image.
  */
 fun ColorScheme.withTranslucentSurfaces(
-    backgroundAlpha: Float = 0.42f,
-    containerAlpha: Float = 0.62f
+    backgroundAlpha: Float = 0.10f,
+    containerAlpha: Float = 0.45f
 ): ColorScheme = copy(
     background = background.copy(alpha = backgroundAlpha),
-    surface = surface.copy(alpha = backgroundAlpha),
+    surface = surface.copy(alpha = backgroundAlpha + 0.12f),
     surfaceDim = surfaceDim.copy(alpha = backgroundAlpha),
-    surfaceBright = surfaceBright.copy(alpha = containerAlpha),
+    surfaceBright = surfaceBright.copy(alpha = containerAlpha + 0.1f),
     surfaceContainerLowest = surfaceContainerLowest.copy(alpha = backgroundAlpha),
-    surfaceContainerLow = surfaceContainerLow.copy(alpha = containerAlpha),
+    surfaceContainerLow = surfaceContainerLow.copy(alpha = 0.30f),
     surfaceContainer = surfaceContainer.copy(alpha = containerAlpha),
-    surfaceContainerHigh = surfaceContainerHigh.copy(alpha = containerAlpha),
-    surfaceContainerHighest = surfaceContainerHighest.copy(alpha = containerAlpha),
+    surfaceContainerHigh = surfaceContainerHigh.copy(alpha = containerAlpha + 0.1f),
+    surfaceContainerHighest = surfaceContainerHighest.copy(alpha = containerAlpha + 0.15f),
     surfaceVariant = surfaceVariant.copy(alpha = containerAlpha)
 )
 

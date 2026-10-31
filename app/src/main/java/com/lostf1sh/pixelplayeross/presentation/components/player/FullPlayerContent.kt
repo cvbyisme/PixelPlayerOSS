@@ -1,6 +1,10 @@
 package com.lostf1sh.pixelplayeross.presentation.components.player
 
 import android.annotation.SuppressLint
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
+import android.media.AudioManager
 import android.content.Context
 import android.content.res.Configuration
 import android.net.Uri
@@ -60,6 +64,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -79,6 +85,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -143,6 +150,7 @@ import racra.compose.smooth_corner_rect_library.AbsoluteSmoothCornerShape
 import timber.log.Timber
 import java.util.Locale
 import kotlin.math.roundToLong
+import kotlin.math.roundToInt
 import com.lostf1sh.pixelplayeross.presentation.components.WavySliderExpressive
 import com.lostf1sh.pixelplayeross.presentation.components.ToggleSegmentButton
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -760,6 +768,10 @@ fun FullPlayerContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             val bluetoothOutputName = bluetoothName?.takeIf { isBluetoothEnabled }
+                            PlayerVolumeLabel(
+                                accentColor = playerAccentColor,
+                                containerColor = playerOnAccentColor.copy(alpha = 0.7f)
+                            )
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
@@ -2521,5 +2533,60 @@ private fun BottomToggleRow(
                 contentDesc = stringResource(R.string.cd_favorite)
             )
         }
+    }
+}
+
+/** Current media-stream volume as a plain percentage, for devices that hide the system panel. */
+private fun readMusicVolumePercent(audioManager: AudioManager?): Int {
+    val manager = audioManager ?: return 0
+    val max = manager.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1)
+    val current = manager.getStreamVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(0)
+    return ((current * 100f) / max).roundToInt()
+}
+
+/**
+ * Numeric readout of the device media volume for the now-playing top bar.
+ *
+ * Media3 exposes per-player gain, not the hardware volume, so this follows the system * VOLUME_CHANGED_ACTION broadcast instead of the player state.
+ */
+@Composable
+private fun PlayerVolumeLabel(
+    accentColor: Color,
+    containerColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val audioManager = remember(context) {
+        context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
+    }
+    var volumePercent by remember { mutableIntStateOf(readMusicVolumePercent(audioManager)) }
+
+    DisposableEffect(audioManager, context) {
+        if (audioManager == null) return@DisposableEffect onDispose { }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context?, intent: Intent?) {
+                volumePercent = readMusicVolumePercent(audioManager)
+            }
+        }
+        val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
+
+    Box(
+        modifier = modifier
+            .height(42.dp)
+            .clip(CircleShape)
+            .background(containerColor)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = volumePercent.toString(),
+            style = MaterialTheme.typography.labelLargeEmphasized,
+            fontWeight = FontWeight.Bold,
+            color = accentColor,
+            maxLines = 1
+        )
     }
 }
