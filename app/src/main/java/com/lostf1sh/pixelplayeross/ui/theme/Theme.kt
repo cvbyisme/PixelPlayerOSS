@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
+import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import androidx.core.graphics.ColorUtils
@@ -31,6 +32,28 @@ import androidx.core.graphics.ColorUtils
 val LocalPixelPlayerDarkTheme = staticCompositionLocalOf { false }
 val LocalPixelPlayerAmoledTheme = staticCompositionLocalOf { false }
 val LocalShowScrollbar = staticCompositionLocalOf { true }
+
+/**
+ * Turns the whole surface family translucent so a custom background image stays visible.
+ *
+ * Painting only [ColorScheme.background] is not enough: cards, sheets and dialogs read from
+ * `surfaceContainer*` / `surfaceVariant`, which stay opaque and would cover the image.
+ */
+fun ColorScheme.withTranslucentSurfaces(
+    backgroundAlpha: Float = 0.42f,
+    containerAlpha: Float = 0.62f
+): ColorScheme = copy(
+    background = background.copy(alpha = backgroundAlpha),
+    surface = surface.copy(alpha = backgroundAlpha),
+    surfaceDim = surfaceDim.copy(alpha = backgroundAlpha),
+    surfaceBright = surfaceBright.copy(alpha = containerAlpha),
+    surfaceContainerLowest = surfaceContainerLowest.copy(alpha = backgroundAlpha),
+    surfaceContainerLow = surfaceContainerLow.copy(alpha = containerAlpha),
+    surfaceContainer = surfaceContainer.copy(alpha = containerAlpha),
+    surfaceContainerHigh = surfaceContainerHigh.copy(alpha = containerAlpha),
+    surfaceContainerHighest = surfaceContainerHighest.copy(alpha = containerAlpha),
+    surfaceVariant = surfaceVariant.copy(alpha = containerAlpha)
+)
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -159,6 +182,7 @@ fun PixelPlayerTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     colorSchemePairOverride: ColorSchemePair? = null,
     themePreset: String = ThemePreset.DEFAULT,
+    appBackground: AppBackgroundConfig = AppBackgroundConfig(),
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -181,17 +205,22 @@ fun PixelPlayerTheme(
         else -> LightColorScheme
     }
 
+    val appliedColorScheme = if (appBackground.isActive) {
+        finalColorScheme.withTranslucentSurfaces()
+    } else {
+        finalColorScheme
+    }
     PixelPlayerStatusBarStyle(
         color = finalColorScheme.background,
         navigationColor = finalColorScheme.background
     )
-
     CompositionLocalProvider(
         LocalPixelPlayerDarkTheme provides (darkTheme || isAmoled),
-        LocalPixelPlayerAmoledTheme provides isAmoled
+        LocalPixelPlayerAmoledTheme provides isAmoled,
+        LocalAppBackground provides appBackground
     ) {
         MaterialTheme(
-            colorScheme = finalColorScheme,
+            colorScheme = appliedColorScheme,
             motionScheme = MotionScheme.expressive(),
             typography = Typography,
             shapes = Shapes,

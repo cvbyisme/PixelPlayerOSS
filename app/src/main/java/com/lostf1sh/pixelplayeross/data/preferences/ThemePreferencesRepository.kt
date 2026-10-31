@@ -22,6 +22,24 @@ class ThemePreferencesRepository @Inject constructor(
         val APP_THEME_MODE = stringPreferencesKey("app_theme_mode")
         val GLOBAL_NOW_PLAYING_THEME_ENABLED = booleanPreferencesKey("global_now_playing_theme_enabled_v1")
         val THEME_PRESET = stringPreferencesKey("theme_preset")
+        val APP_BACKGROUND_ENABLED = booleanPreferencesKey("app_background_enabled_v1")
+        val APP_BACKGROUND_PATH = stringPreferencesKey("app_background_path_v1")
+        val APP_BACKGROUND_BLUR = intPreferencesKey("app_background_blur_v1")
+        val APP_BACKGROUND_DIM = intPreferencesKey("app_background_dim_v1")
+    }
+
+    /** Custom app-wide background image, plus its blur and dim tuning. */
+    val appBackgroundFlow: Flow<AppBackgroundConfig> = dataStore.data.map { preferences ->
+        AppBackgroundConfig(
+            enabled = preferences[Keys.APP_BACKGROUND_ENABLED] ?: false,
+            imagePath = preferences[Keys.APP_BACKGROUND_PATH],
+            blurRadius = AppBackgroundConfig.clampBlur(
+                preferences[Keys.APP_BACKGROUND_BLUR] ?: AppBackgroundConfig.DEFAULT_BLUR
+            ),
+            dimPercent = AppBackgroundConfig.clampDim(
+                preferences[Keys.APP_BACKGROUND_DIM] ?: AppBackgroundConfig.DEFAULT_DIM
+            )
+        )
     }
 
     val appThemeModeFlow: Flow<String> = dataStore.data.map { preferences ->
@@ -62,11 +80,35 @@ class ThemePreferencesRepository @Inject constructor(
         dataStore.edit { preferences ->
             preferences[Keys.GLOBAL_NOW_PLAYING_THEME_ENABLED] = enabled
         }
-
     suspend fun setThemePreset(preset: String) =
         dataStore.edit { preferences ->
             preferences[Keys.THEME_PRESET] = ThemePreset.sanitize(preset)
         }
+
+    suspend fun setAppBackgroundEnabled(enabled: Boolean) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_BACKGROUND_ENABLED] = enabled
+        }
+
+    suspend fun setAppBackgroundPath(path: String?) =
+        dataStore.edit { preferences ->
+            if (path.isNullOrBlank()) {
+                preferences.remove(Keys.APP_BACKGROUND_PATH)
+            } else {
+                preferences[Keys.APP_BACKGROUND_PATH] = path
+            }
+        }
+
+    suspend fun setAppBackgroundBlur(radius: Int) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_BACKGROUND_BLUR] = AppBackgroundConfig.clampBlur(radius)
+        }
+
+    suspend fun setAppBackgroundDim(percent: Int) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_BACKGROUND_DIM] = AppBackgroundConfig.clampDim(percent)
+        }
+
 
     suspend fun initializeAppThemeMode(themeMode: String) =
         dataStore.edit { preferences ->

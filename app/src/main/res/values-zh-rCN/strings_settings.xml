@@ -378,4 +378,13 @@
     <string name="playback_speed_custom_supporting">%1$s× 至 %2$s×，最多两位小数</string>
     <string name="playback_speed_custom_error">请输入 %1$s× 至 %2$s× 之间的速度</string>
     <string name="playback_speed_multiplier_suffix">×</string>
+    <string name="setcat_custom_background_title">自定义背景</string>
+    <string name="setcat_custom_background_subtitle">在全部界面底层显示你选择的图片</string>
+    <string name="setcat_custom_background_pick_title">背景图片</string>
+    <string name="setcat_custom_background_pick_desc">从相册选择一张图片</string>
+    <string name="setcat_custom_background_pick_selected">点击可更换当前图片</string>
+    <string name="setcat_custom_background_blur_title">模糊程度</string>
+    <string name="setcat_custom_background_dim_title">暗化程度</string>
+    <string name="setcat_custom_background_clear_title">移除背景</string>
+    <string name="setcat_custom_background_clear_desc">删除已保存的图片并恢复默认外观</string>
 </resources>

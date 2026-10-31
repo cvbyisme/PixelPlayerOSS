@@ -15,6 +15,7 @@ import com.lostf1sh.pixelplayeross.data.backup.model.RestorePlan
 import com.lostf1sh.pixelplayeross.data.backup.model.RestoreResult
 import com.lostf1sh.pixelplayeross.data.backup.model.ValidationError
 import com.lostf1sh.pixelplayeross.data.model.AudioOutputMode
+import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
 import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.CarouselStyle
@@ -49,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import com.lostf1sh.pixelplayeross.di.AppScope
 import javax.inject.Inject
 
@@ -69,6 +71,7 @@ data class SettingsUiState(
     val appThemeMode: String = AppThemeMode.FOLLOW_SYSTEM,
     val globalNowPlayingThemeEnabled: Boolean = false,
     val themePreset: String = ThemePreset.DEFAULT,
+    val appBackground: AppBackgroundConfig = AppBackgroundConfig(),
     val playerThemePreference: String = ThemePreference.ALBUM_ART,
     val albumArtPaletteStyle: AlbumArtPaletteStyle = AlbumArtPaletteStyle.default,
     val albumArtColorAccuracy: Int = AlbumArtColorAccuracy.DEFAULT,
@@ -264,6 +267,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.themePresetFlow.collect { preset ->
                 _uiState.update { it.copy(themePreset = preset) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferencesRepository.appBackgroundFlow.collect { background ->
+                _uiState.update { it.copy(appBackground = background) }
             }
         }
     }
@@ -627,6 +635,58 @@ class SettingsViewModel @Inject constructor(
     fun setThemePreset(preset: String) {
         viewModelScope.launch {
             themePreferencesRepository.setThemePreset(preset)
+        }
+    }
+
+    fun setAppBackgroundEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            themePreferencesRepository.setAppBackgroundEnabled(enabled)
+        }
+    }
+
+    fun setAppBackgroundBlur(radius: Int) {
+        viewModelScope.launch {
+            themePreferencesRepository.setAppBackgroundBlur(radius)
+        }
+    }
+
+    fun setAppBackgroundDim(percent: Int) {
+        viewModelScope.launch {
+            themePreferencesRepository.setAppBackgroundDim(percent)
+        }
+    }
+
+    /**
+     * Copies the picked image into private storage: a persisted content:// permission is not
+     * guaranteed to outlive the process, and the user may revoke media access afterwards.
+     */
+    fun setAppBackgroundFromUri(uri: Uri) {
+        viewModelScope.launch {
+            val savedPath = withContext(Dispatchers.IO) {
+                runCatching {
+                    val directory = File(context.filesDir, AppBackgroundConfig.DIR_NAME).apply { mkdirs() }
+                    directory.listFiles()?.forEach { stale -> stale.delete() }
+                    val target = File(directory, "background.jpg")
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        target.outputStream().use { output -> input.copyTo(output) }
+                    }
+                    target.takeIf { it.length() > 0L }?.absolutePath
+                }.getOrNull()
+            }
+            if (savedPath != null) {
+                themePreferencesRepository.setAppBackgroundPath(savedPath)
+                themePreferencesRepository.setAppBackgroundEnabled(true)
+            }
+        }
+    }
+
+    fun clearAppBackground() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                runCatching { File(context.filesDir, AppBackgroundConfig.DIR_NAME).deleteRecursively() }
+            }
+            themePreferencesRepository.setAppBackgroundPath(null)
+            themePreferencesRepository.setAppBackgroundEnabled(false)
         }
     }
 

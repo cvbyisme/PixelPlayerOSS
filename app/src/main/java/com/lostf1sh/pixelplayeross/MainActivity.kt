@@ -80,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -108,6 +109,7 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
 import com.lostf1sh.pixelplayeross.data.preferences.NavBarStyle
 import com.lostf1sh.pixelplayeross.data.preferences.sanitizeNavBarCornerRadius
@@ -139,6 +141,7 @@ import com.lostf1sh.pixelplayeross.presentation.screens.SetupScreen
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.MainViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.splash.PixelPlayerSplash
+import com.lostf1sh.pixelplayeross.ui.theme.AppBackgroundLayer
 import com.lostf1sh.pixelplayeross.ui.theme.PixelPlayerTheme
 import com.lostf1sh.pixelplayeross.ui.theme.resolveAppWideNowPlayingColorSchemePair
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
@@ -301,6 +304,8 @@ class MainActivity : ComponentActivity() {
             val systemDarkTheme = isSystemInDarkTheme()
             val appThemeMode by themePreferencesRepository.appThemeModeFlow.collectAsStateWithLifecycle(initialValue = AppThemeMode.FOLLOW_SYSTEM)
             val themePreset by themePreferencesRepository.themePresetFlow.collectAsStateWithLifecycle(initialValue = ThemePreset.DEFAULT)
+            val appBackground by themePreferencesRepository.appBackgroundFlow
+                .collectAsStateWithLifecycle(initialValue = AppBackgroundConfig())
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -385,7 +390,8 @@ class MainActivity : ComponentActivity() {
             PixelPlayerTheme(
                 darkTheme = useDarkTheme,
                 colorSchemePairOverride = appWideNowPlayingScheme,
-                themePreset = themePreset
+                themePreset = themePreset,
+                appBackground = appBackground
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(
@@ -402,9 +408,14 @@ class MainActivity : ComponentActivity() {
                 var showAnimatedSplash by remember { mutableStateOf(playAnimatedSplash) }
 
                 Box(modifier = Modifier.fillMaxSize()) {
+                    AppBackgroundLayer(
+                        config = appBackground,
+                        modifier = Modifier.fillMaxSize()
+                    )
                     Surface(
                         modifier = Modifier.fillMaxSize().graphicsLayer { alpha = contentAlpha },
-                        color = MaterialTheme.colorScheme.background
+                        color = if (appBackground.isActive) Color.Transparent
+                        else MaterialTheme.colorScheme.background
                     ) {
                         if (showSetupScreen == null) {
                             SetupGateLoadingScreen()

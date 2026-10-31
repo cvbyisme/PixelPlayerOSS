@@ -395,4 +395,13 @@
     <string name="updates_notification_text">PixelPlayerOSS %1$s is ready to install.</string>
     <string name="updates_notification_confirm_title">Finish updating PixelPlayerOSS</string>
     <string name="updates_notification_confirm_text">Tap to confirm the installation.</string>
+    <string name="setcat_custom_background_title">Custom Background</string>
+    <string name="setcat_custom_background_subtitle">Show a picture of your choice behind the whole app</string>
+    <string name="setcat_custom_background_pick_title">Background Image</string>
+    <string name="setcat_custom_background_pick_desc">Pick an image from your gallery</string>
+    <string name="setcat_custom_background_pick_selected">Tap to replace the current image</string>
+    <string name="setcat_custom_background_blur_title">Blur</string>
+    <string name="setcat_custom_background_dim_title">Dim</string>
+    <string name="setcat_custom_background_clear_title">Remove Background</string>
+    <string name="setcat_custom_background_clear_desc">Delete the stored image and restore the default look</string>
 </resources>
