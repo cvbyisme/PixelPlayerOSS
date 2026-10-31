@@ -68,7 +68,10 @@
 
 ## 安装
 
-- 需要 Android 11+
+**[下载最新 APK](https://github.com/cvbyisme/PixelPlayerOSS/releases/latest)**（选和手机架构对应的那个）
+
+- 需要 Android 11+；模糊相关效果需 Android 12（API 31）及以上
+- 提供 `arm64-v8a` 与 `armeabi-v7a` 两个版本，签名一致
 - 这个分支的包是用**我自己的密钥**签的，和官方包、上一条 fork 的 CI 包签名都不一样；覆盖安装失败就先卸载原版再装（会丢本地设置）
 
 ## 已知限制
