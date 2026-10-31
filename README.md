@@ -1,236 +1,99 @@
-
 <p align="center">
-  <img src="assets/PixelPlayerOSS.svg" alt="App Icon" height="250"/>
+  <img src="assets/PixelPlayerOSS.svg" alt="App Icon" height="200"/>
 </p>
 
+<h1 align="center">PixelPlayerOSS · 个人修改版</h1>
+
 <p align="center">
-  <a href="https://github.com/PixelPlayerHQ/PixelPlayerOSS/releases/latest">
-    <img src="https://img.shields.io/github/v/release/PixelPlayerHQ/PixelPlayerOSS?include_prereleases&logo=github&style=for-the-badge&label=Latest%20Release" alt="Latest release">
-  </a>
-  <a href="https://f-droid.org/packages/com.lostf1sh.pixelplayeross/">
-    <img src="https://img.shields.io/f-droid/v/com.lostf1sh.pixelplayeross?logo=fdroid&style=for-the-badge&label=F-Droid" alt="F-Droid version">
-  </a>
-  <a href="https://github.com/PixelPlayerHQ/PixelPlayerOSS/releases">
-    <img src="https://img.shields.io/github/downloads/PixelPlayerHQ/PixelPlayerOSS/total?logo=github&style=for-the-badge" alt="Total downloads">
-  </a>
-  <a href="https://github.com/sponsors/lostf1sh">
-    <img src="https://img.shields.io/badge/Sponsor-GitHub%20Sponsors-EA4AAA?style=for-the-badge&logo=githubsponsors&logoColor=white" alt="Sponsor on GitHub Sponsors">
-  </a>
+  <img src="https://img.shields.io/badge/version-0.5.0--cvby-4FF0D0?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 11+">
-  <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="GPLv3 license">
+  <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="GPLv3">
 </p>
 
 <p align="center">
-  <img src="assets/screenshot1.jpeg" alt="PixelPlayerOSS home screen" width="205"/>
-  <img src="assets/screenshot2.jpeg" alt="PixelPlayerOSS now playing screen" width="205"/>
-  <img src="assets/screenshot3.jpeg" alt="PixelPlayerOSS library screen" width="205"/>
-  <img src="assets/screenshot4.jpeg" alt="PixelPlayerOSS lyrics screen" width="205"/>
+  一个本地音乐播放器的个人美化分支，基于
+  <a href="https://github.com/PixelPlayerHQ/PixelPlayerOSS">PixelPlayerHQ/PixelPlayerOSS</a>。
+  只是自己用着顺手，慢慢加了点喜欢的东西，不是官方版本。
 </p>
 
-## What It Is
+---
 
-PixelPlayerOSS is an Android music player maintained by [@lostf1sh](https://github.com/lostf1sh). It focuses on local playback, self-hosted music libraries, expressive Material 3 UI, and user-controlled online lookups.
+## 这是什么
 
-The app works offline by default. Optional online services are disabled until you enable them in setup or settings.
+上游 [PixelPlayerOSS](https://github.com/PixelPlayerHQ/PixelPlayerOSS) 是 [@lostf1sh](https://github.com/lostf1sh) 维护的开源 Android 音乐播放器：本地播放、自建音乐库、Material 3 Expressive 界面，默认离线。
 
-Package name: `com.lostf1sh.pixelplayeross`
+这个分支（`personal-cvby`）在上面加了一些**外观自定义**的小功能，代码改动集中在主题层与播放页，播放核心没动。
 
-## Why This Exists
+- 包名：`com.lostf1sh.pixelplayeross`
+- 版本：`0.5.0-cvby`
+- 分支：`personal-cvby`（`main` 保持与上游同步）
 
-PixelPlayerOSS keeps the player FOSS-oriented and removes integrations that are not part of that direction.
+## 相比上游多了什么
 
-Removed integrations include Telegram, NetEase, QQ Music, Google Drive, Gemini, Cast, Wear OS, Play Store billing, Firebase, Crashlytics, and Google Play Services runtime dependencies.
+### 自定义背景
 
-Cloud playback is limited to self-hosted sources: Navidrome/Subsonic and Jellyfin.
+- 设置 → 外观 → 自定义背景：开关、从相册选图
+- 图片会复制进应用私有目录，重启、撤销授权都不会丢
+- 模糊程度 0–40、暗化程度 0–85%
+- **页面背景不透明度**、**卡片/面板不透明度** 各 0–100%，自己拿捏壁纸透出多少
 
-## Features
+### 播放页外观
 
-| Area | Highlights |
-| --- | --- |
-| Playback | Media3 playback engine, FFmpeg support, gapless playback, crossfade, custom transitions, queue controls, shuffle, repeat, sleep timer, external file playback |
-| Library | Local scanning for MP3, FLAC, AAC, OGG, WAV, M4A, albums, artists, genres, folders, favorites, playlists, stats, metadata editing |
-| Self-hosted | Navidrome/Subsonic and Jellyfin login, sync, streaming, artwork, and app-private offline downloads |
-| Lyrics | Embedded lyrics, local `.lrc` files, lyrics import/editing, optional LRCLIB lookup |
-| Artwork | Local artwork, album-art palette extraction, optional Deezer artist image lookup |
-| Metadata | On-demand MusicBrainz matching for recording, release, and artist identifiers |
-| UI | Jetpack Compose, Material 3, dynamic color, light/dark themes, Glance widgets, animated player surfaces |
-| Backup | Preferences, playlists, favorites, lyrics, stats, and app state backup/restore |
+- **点击封面行为**：可切换成「打开歌词面板」（默认仍是专辑详情）
+- **模糊封面背景**：把当前歌曲封面模糊后直接铺在播放页后面
+- **播放页背景蒙版**：0–85% 黑色蒙版，文字看得清
+- **播控按钮配色**：表现色 / 强调色 / 单色 三档
 
-## Online Services
+### 顺带的
 
-PixelPlayerOSS separates offline playback from network lookups.
+- 播放页顶部音量数字，变化时带一点点动画
+- 关于页有个人信息卡（维护者、来源、本版改动清单）
+- 移除了页面级背景遮罩，遮罩统一交给壁纸层，避免叠加过暗
 
-| Service | Purpose | Default |
-| --- | --- | --- |
-| Navidrome/Subsonic | Self-hosted library sync, streaming, and offline downloads | User login required |
-| Jellyfin | Self-hosted library sync, streaming, and offline downloads | User login required |
-| MusicBrainz | On-demand metadata matching and identifier enrichment | Only when requested |
-| LRCLIB | Search online lyrics when local or embedded lyrics are missing | Off |
-| Deezer | Fetch missing artist artwork and cache it locally | Off |
+## 截图
 
-LRCLIB and Deezer can be enabled during first-run setup or later from `Settings > Music Management > Optional online services`. MusicBrainz searches run only when you choose the lookup action for a track.
+占位中 —— 手头机器换主题比较频繁，等哪天固定下来再补 `assets/` 里的图 (｡･ω･｡)
 
-## Requirements
+## 构建
 
-| Requirement | Version |
-| --- | --- |
-| Android | 11 or newer, API 30+ |
-| JDK | 21 |
-| Android SDK | compile/target 37 |
+和上游一致，需要 JDK 21 + Android SDK：
 
-## Build From Source
-
-Clone the repository:
-
-```sh
-git clone https://github.com/PixelPlayerHQ/PixelPlayerOSS.git
-cd PixelPlayerOSS
+```bash
+./gradlew :app:assembleRelease
 ```
 
-Build the debug APK:
+产物在 `app/build/outputs/apk/release/`。
 
-```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:assembleDebug
-```
+本仓库用 GitHub Actions（`.github/workflows/nightly-apk.yml`）云构建，workflow_dispatch 可指定分支触发。
 
-Build one universal debug APK for local installation:
+## 安装
 
-```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:assembleDebug -Ppixelplayer.enableAbiSplits=false
-```
+- 需要 Android 11+
+- 这个分支的包是用**我自己的密钥**签的，和官方包、上一条 fork 的 CI 包签名都不一样；覆盖安装失败就先卸载原版再装（会丢本地设置）
 
-Build a universal unsigned release APK suitable for F-Droid verification:
+## 已知限制
 
-```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:assembleRelease -Ppixelplayer.enableAbiSplits=false -Ppixelplayer.disableReleaseSigning=true
-```
+- 模糊依赖 `Modifier.blur` / RenderEffect，**只有 Android 12（API 31）及以上生效**，低版本会是未模糊的封面
+- 模糊封面背景 + 高蒙版会给 GPU 一点压力，老机器建议把蒙版调低或关掉
+- 只测过 arm64 设备
 
-Run unit tests:
+## 关于这个 fork
 
-```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:testDebugUnitTest
-```
+- 代码、文案、调试过程有 **AI 参与**，取舍和验收是我自己把关的
+- 提 issue / PR 欢迎，但优先看上游：上游修复的问题我不一定跟得及时
+- 本项目不提供付费支持，也不代表上游立场
 
-Generate the baseline profile with a connected device or emulator:
+## 许可证
 
-```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :baselineprofile:generateBaselineProfile
-```
+GPL-3.0，与上游一致。上游完整说明见 [README.upstream.md](README.upstream.md)。
 
-## Download
+## 致谢
 
-PixelPlayerOSS is available on F-Droid:
+- [@lostf1sh](https://github.com/lostf1sh) 与 [PixelPlayerHQ](https://github.com/PixelPlayerHQ)：上游项目本体
+- 上游 README 里列出的所有依赖与贡献者
 
-<a href="https://f-droid.org/packages/com.lostf1sh.pixelplayeross/">
-  <img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">
-</a>
-
-GitHub releases are available at:
-
-```text
-https://github.com/PixelPlayerHQ/PixelPlayerOSS/releases
-```
-
-Obtainium app id:
-
-```text
-com.lostf1sh.pixelplayeross
-```
-
-Public releases are planned on a regular weekly cadence when `main` passes the release checklist.
-
-F-Droid listing metadata lives in `fastlane/metadata/android/en-US`; build/release notes for F-Droid are in [docs/FDROID.md](docs/FDROID.md).
-
-> Note: F-Droid builds and signs its own APKs from source, so they may lag behind GitHub releases while the new version works through the F-Droid build cycle. F-Droid and GitHub APK signatures differ — switching between the two requires an uninstall/reinstall.
-
-### Alpha builds
-
-Every merge into `main` automatically publishes a pre-release tagged like `v0.3.0-alpha.N` on the [releases page](https://github.com/PixelPlayerHQ/PixelPlayerOSS/releases). These are cutting-edge builds for testing new changes before they reach a stable release — expect rough edges.
-
-To install one, download the APK for your device from the release assets and sideload it: `arm64-v8a` fits most modern devices, `armeabi-v7a` is for older 32-bit ones.
-
-Alpha builds are signed with a dedicated CI key, so they update over each other, but switching between alpha and a stable or F-Droid install requires an uninstall/reinstall. In Obtainium, enable "Include prereleases" to get alphas automatically.
-
-## Support
-
-If PixelPlayerOSS is useful to you, you can support ongoing development through [GitHub Sponsors](https://github.com/sponsors/lostf1sh).
-
-## Project Structure
-
-```text
-app/src/main/java/com/lostf1sh/pixelplayeross/
-- data/             Room, repositories, preferences, services, workers
-- di/               Hilt modules and qualifiers
-- presentation/     Compose screens, components, navigation, ViewModels
-- ui/               Theme and Glance widgets
-- utils/            Shared utilities
-
-baselineprofile/      Macrobenchmark and baseline profile generation
-```
-
-## Tech Stack
-
-| Area | Technology |
-| --- | --- |
-| Language | Kotlin |
-| UI | Jetpack Compose |
-| Design | Material 3 |
-| Playback | AndroidX Media3, ExoPlayer, FFmpeg |
-| Database | Room |
-| Dependency Injection | Hilt |
-| Preferences | DataStore |
-| Background Work | WorkManager |
-| Networking | Retrofit, OkHttp |
-| Images | Coil |
-| Metadata | TagLib |
-
-## Contributing
-
-Contributions are welcome. Open an issue or pull request with a focused change and include test/build results when possible.
-
-Useful local checks:
-
-```sh
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:compileDebugKotlin
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:lintDebug
-JAVA_HOME=/usr/lib/jvm/java-21-openjdk ./gradlew :app:testDebugUnitTest
-```
-
-Release process: [docs/RELEASE.md](docs/RELEASE.md)
-
-F-Droid notes: [docs/FDROID.md](docs/FDROID.md)
-
-Privacy policy: [PRIVACY.md](PRIVACY.md)
-
-Security policy: [SECURITY.md](SECURITY.md)
-
-## License
-
-PixelPlayerOSS is licensed under the [GNU General Public License v3.0](LICENSE) (`SPDX-License-Identifier: GPL-3.0-or-later`).
-
-```
-PixelPlayerOSS
-Copyright (C) 2026 Theo Vilardo
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <https://www.gnu.org/licenses/>.
-```
-
-Distributed APKs include third-party components under their own licenses. In particular, the optional FFmpeg decoder dependency `org.jellyfin.media3:media3-ffmpeg-decoder` is GPL-3.0; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+---
 
 <p align="center">
-  Maintained by <a href="https://github.com/lostf1sh">lostf1sh</a>
-</p>
-<p align="center">
-  Logo designed by <a href="https://github.com/NPSummers">Aureal</a>.
+  <sub>个人维护：<a href="https://github.com/cvbyisme">cvby</a> · <a href="https://cvby.pages.dev">cvby.pages.dev</a></sub>
 </p>
