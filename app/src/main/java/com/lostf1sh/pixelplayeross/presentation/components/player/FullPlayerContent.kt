@@ -130,6 +130,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.FullPlayerLoadingTweaks
 import com.lostf1sh.pixelplayeross.presentation.components.AlbumCarouselSection
 import com.lostf1sh.pixelplayeross.presentation.components.AutoScrollingTextOnDemand
 import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsStyle
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsShape
 import com.lostf1sh.pixelplayeross.presentation.components.LocalMaterialTheme
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPlayerUiConfig
 import com.lostf1sh.pixelplayeross.presentation.components.LyricsSheet
