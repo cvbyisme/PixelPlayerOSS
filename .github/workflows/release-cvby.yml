@@ -1,0 +1,96 @@
+name: Release cvby APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag, e.g. v0.6.0-cvby"
+        required: true
+        default: "v0.6.0-cvby"
+      prerelease:
+        description: "Mark as prerelease (true/false)"
+        required: false
+        default: "false"
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: release-cvby-${{ github.event.inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6.2.0
+
+      - name: Set up CI keystore
+        env:
+          CI_KEYSTORE_B64: ${{ secrets.CI_KEYSTORE_B64 }}
+          CI_KEYSTORE_PASSWORD: ${{ secrets.CI_KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$CI_KEYSTORE_B64" ] || [ -z "$CI_KEYSTORE_PASSWORD" ]; then
+            echo "::error::CI_KEYSTORE_B64 / CI_KEYSTORE_PASSWORD secrets are missing; refusing to build unsigned release."
+            exit 1
+          fi
+          printf '%s' "$CI_KEYSTORE_B64" | base64 -d > pixelplayeross-ci.jks
+          {
+            echo "storeFile=pixelplayeross-ci.jks"
+            echo "storePassword=$CI_KEYSTORE_PASSWORD"
+            echo "keyAlias=pixelplayeross-ci-key"
+            echo "keyPassword=$CI_KEYSTORE_PASSWORD"
+          } > keystore.properties
+
+      - name: Build split release APKs
+        run: ./gradlew :app:assembleRelease -Ppixelplayer.enableAbiSplits=true
+
+      - name: Verify APK signature
+        run: |
+          BUILD_TOOLS_VERSION="$(ls "$ANDROID_HOME/build-tools" | sort -V | tail -n 1)"
+          "$ANDROID_HOME/build-tools/$BUILD_TOOLS_VERSION/apksigner" verify --print-certs \
+            app/build/outputs/apk/release/app-arm64-v8a-release.apk | tee /tmp/certs.txt
+          grep -qi "61:9d:b3:f6:e4:e1:a1:9b:be:54:83:87:7a:7d:4f:32:bc:de:4d:60:29:62:26:07:22:27:90:d8:92:db:df:2d" /tmp/certs.txt \
+            || echo "::warning::Signer cert SHA-256 differs from cvby-release.keystore"
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk \
+             "PixelPlayerOSS-${{ github.event.inputs.tag }}-arm64-v8a.apk"
+          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk \
+             "PixelPlayerOSS-${{ github.event.inputs.tag }}-armeabi-v7a.apk"
+          ls -l *.apk
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag }}
+          PRE: ${{ github.event.inputs.prerelease }}
+        run: |
+          NOTES_FILE=release-notes.md
+          if [ -f "docs/release/$TAG.md" ]; then
+            NOTES_FILE="docs/release/$TAG.md"
+            echo "Using $NOTES_FILE"
+          else
+            printf 'Version %s build from %s\n' "$TAG" "${GITHUB_SHA}" > release-notes.md
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG exists, uploading/replacing assets."
+          else
+            FLAGS=""
+            if [ "$PRE" = "true" ]; then FLAGS="--prerelease"; fi
+            gh release create "$TAG" --title "$TAG" --notes-file "$NOTES_FILE" --target "$GITHUB_SHA" $FLAGS
+          fi
+          gh release upload "$TAG" \
+            "PixelPlayerOSS-$TAG-arm64-v8a.apk" \
+            "PixelPlayerOSS-$TAG-armeabi-v7a.apk" \
+            --clobber
+          gh release view "$TAG" --json assets --jq '.assets[] | "\(.name) \(.size)"'
