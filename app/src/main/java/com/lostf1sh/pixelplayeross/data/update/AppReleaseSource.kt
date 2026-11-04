@@ -2,6 +2,7 @@ package com.lostf1sh.pixelplayeross.data.update
 
 import android.os.Build
 import com.lostf1sh.pixelplayeross.BuildConfig
+import com.lostf1sh.pixelplayeross.data.network.NetworkGate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -30,8 +31,8 @@ class AppReleaseSource @Inject constructor(
     /** Newest release of [channel], or null when the channel has nothing installable for this device. */
     suspend fun latest(channel: UpdateChannel): AppRelease? = withContext(Dispatchers.IO) {
         when (channel) {
-            UpdateChannel.STABLE -> parseFdroidPackage(getJson("$FDROID_API/$PUBLISHED_PACKAGE"), PUBLISHED_PACKAGE)
-            UpdateChannel.ALPHA -> parseLatestAlpha(
+            UpdateChannel.STABLE -> if (!NetworkGate.isEnabled()) null else parseFdroidPackage(getJson("$FDROID_API/$PUBLISHED_PACKAGE"), PUBLISHED_PACKAGE)
+            UpdateChannel.ALPHA -> if (!NetworkGate.isEnabled()) null else parseLatestAlpha(
                 JSONArray(getBody(GITHUB_RELEASES_API)),
                 supportedAbis = Build.SUPPORTED_ABIS.toList()
             )

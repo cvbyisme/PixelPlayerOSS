@@ -50,6 +50,7 @@ import com.lostf1sh.pixelplayeross.data.model.PlaybackQueueSnapshot
 import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.data.preferences.EqualizerPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
+import com.lostf1sh.pixelplayeross.data.network.NetworkGate
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
@@ -181,6 +182,11 @@ suspend fun loadArtworkBytesViaCoil(context: Context, uri: Uri): ByteArray? {
 @AndroidEntryPoint
 class MusicService : MediaSessionService() {
 
+    /** Only used to decide how often background work is allowed to run. */
+    private val powerManager: android.os.PowerManager? by lazy {
+        getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+    }
+
     @Inject
     lateinit var engine: DualPlayerEngine
     @Inject
@@ -276,6 +282,12 @@ class MusicService : MediaSessionService() {
         private const val WIDGET_ART_FAILURE_RETRY_MS = 30_000L
         private const val WIDGET_QUEUE_PREVIEW_LIMIT = 4
         private const val HEADSET_RECONNECT_RESUME_WINDOW_MS = 15_000L
+        /** Server playback-position reports: frequent enough for scrobbles while visible… */
+        private const val NAVIDROME_REPORT_FOREGROUND_MS = 30_000L
+        /** …and backed off hard while the screen is off, where nobody reads the progress. */
+        private const val NAVIDROME_REPORT_BACKGROUND_MS = 120_000L
+        /** Widget repaints while the screen is off only need to be correct, not instant. */
+        private const val WIDGET_BACKGROUND_DEBOUNCE_MS = 1_500L
 
         fun markPendingTemporaryForegroundStart() {
             pendingTemporaryForegroundStarts.incrementAndGet()
@@ -1062,12 +1074,15 @@ class MusicService : MediaSessionService() {
     }
 
     private var navidromePlaybackReportJob: Job? = null
-
     private fun startNavidromePlaybackReporting() {
         navidromePlaybackReportJob?.cancel()
         navidromePlaybackReportJob = serviceScope.launch {
             while (true) {
-                delay(30_000)
+                // Reporting is a server round-trip per tick, so it backs off hard while the
+                // screen is off and skips entirely when online features are disabled.
+                val interactive = powerManager?.isInteractive ?: true
+                delay(if (interactive) NAVIDROME_REPORT_FOREGROUND_MS else NAVIDROME_REPORT_BACKGROUND_MS)
+                if (!NetworkGate.isEnabled()) continue
                 val player = engine.masterPlayer
                 if (player.isPlaying && isNavidromeMediaItem(player.currentMediaItem)) {
                     reportNavidromePlayback("playing")
@@ -1075,7 +1090,6 @@ class MusicService : MediaSessionService() {
             }
         }
     }
-
     private fun stopNavidromePlaybackReporting() {
         navidromePlaybackReportJob?.cancel()
         navidromePlaybackReportJob = null
@@ -1679,10 +1693,17 @@ class MusicService : MediaSessionService() {
     private fun requestWidgetFullUpdate(force: Boolean = false) {
         debouncedWidgetUpdateJob?.cancel()
         debouncedWidgetUpdateJob = serviceScope.launch {
-            val debounceMs = if (force) {
+            val baseDebounceMs = if (force) {
                 FORCED_WIDGET_STATE_DEBOUNCE_MS
             } else {
                 widgetStateDebounceMs
+            }
+            // Nobody is looking at a home-screen widget while the screen is off, so widen the
+            // coalescing window and let a burst of state changes collapse into one repaint.
+            val debounceMs = if (powerManager?.isInteractive == false) {
+                maxOf(baseDebounceMs, WIDGET_BACKGROUND_DEBOUNCE_MS)
+            } else {
+                baseDebounceMs
             }
             if (debounceMs > 0L) {
                 delay(debounceMs)

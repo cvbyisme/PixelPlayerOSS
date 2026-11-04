@@ -65,6 +65,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.CropSquare
@@ -1265,6 +1266,18 @@ fun SettingsCategoryScreen(
 
                         }
                         SettingsCategory.BEHAVIOR -> {
+                            SettingsSubsection(
+                                title = stringResource(R.string.setcat_network_section)
+                            ) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_network_enabled_title),
+                                    subtitle = stringResource(R.string.setcat_network_enabled_subtitle),
+                                    checked = uiState.networkEnabled,
+                                    onCheckedChange = { settingsViewModel.setNetworkEnabled(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Wifi, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_behavior_network_enabled", highlightKey)
+                                )
+                            }
                             SettingsSubsection(
                                 title = stringResource(R.string.setcat_folders)
                             ) {

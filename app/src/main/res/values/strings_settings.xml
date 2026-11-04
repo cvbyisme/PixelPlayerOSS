@@ -205,6 +205,9 @@
     <string name="setcat_show_queue_history_subtitle">Show previously played songs in the queue.</string>
 
     <string name="setcat_folders">Folders</string>
+    <string name="setcat_network_section">Network</string>
+    <string name="setcat_network_enabled_title">Online features</string>
+    <string name="setcat_network_enabled_subtitle">Off by default. Turning this on enables servers (Navidrome/Jellyfin), online lyrics and artwork, scrobbling and update checks. Everything that leaves the device stops the moment it is off.</string>
     <string name="setcat_folder_back_gesture_title">Back gesture controls folders</string>
     <string name="setcat_folder_back_gesture_subtitle">In Folders tab, system back navigates folder stack before leaving Library.</string>
     <string name="setcat_player_gestures">Player Gestures</string>

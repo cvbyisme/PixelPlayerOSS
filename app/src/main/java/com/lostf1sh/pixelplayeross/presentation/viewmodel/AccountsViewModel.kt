@@ -29,7 +29,7 @@ import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 
-private const val PROFILE_STATS_POLL_MS = 20_000L
+private const val PROFILE_STATS_POLL_MS = 60_000L
 
 enum class ExternalServiceAccount {
     NAVIDROME,

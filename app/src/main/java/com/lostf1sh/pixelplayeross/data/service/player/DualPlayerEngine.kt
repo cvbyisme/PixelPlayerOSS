@@ -448,6 +448,9 @@ class DualPlayerEngine @Inject constructor(
                 lastPlayingAtMs = SystemClock.elapsedRealtime()
                 cancelAudioOffloadFallback()
             }
+            // A paused or stopped player has no reason to hold a partial wake lock, so drop it
+            // as soon as playback stops and pick the right mode again on resume.
+            applyOffloadAwareWakeMode()
         }
 
         /**
@@ -1279,14 +1282,16 @@ class DualPlayerEngine @Inject constructor(
     private fun applyOffloadAwareWakeMode() {
         if (!::playerA.isInitialized) return
         val baseMode = wakeModeFor(playerA.currentMediaItem)
-        val desiredMode = if (
+        val desiredMode = when {
+            // Nothing is playing: holding a partial wake lock (or the wifi lock) is pure drain.
+            !playerA.isPlaying &&
+                !_sleepTimerHold.value.keepCpuAwake &&
+                baseMode == C.WAKE_MODE_LOCAL -> C.WAKE_MODE_NONE
+            // Offload means the audio HAL keeps playing while the CPU sleeps.
             lastSleepingForOffload &&
-            baseMode == C.WAKE_MODE_LOCAL &&
-            !_sleepTimerHold.value.keepCpuAwake
-        ) {
-            C.WAKE_MODE_NONE
-        } else {
-            baseMode
+                baseMode == C.WAKE_MODE_LOCAL &&
+                !_sleepTimerHold.value.keepCpuAwake -> C.WAKE_MODE_NONE
+            else -> baseMode
         }
         if (currentWakeMode == desiredMode) return
 

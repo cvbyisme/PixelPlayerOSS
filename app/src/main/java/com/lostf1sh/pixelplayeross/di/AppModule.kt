@@ -379,6 +379,8 @@ object AppModule {
         
         return OkHttpClient.Builder()
             .connectionPool(connectionPool)
+            // Local-first: every request bails out immediately while the network switch is off.
+            .addInterceptor(com.lostf1sh.pixelplayeross.data.network.NetworkAccessInterceptor())
             .connectTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
             .readTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
             .writeTimeout(8, java.util.concurrent.TimeUnit.SECONDS)
@@ -434,6 +436,7 @@ object AppModule {
         return OkHttpClient.Builder()
             .dns(dns)
             .connectionPool(connectionPool)
+            .addInterceptor(com.lostf1sh.pixelplayeross.data.network.NetworkAccessInterceptor())
             .protocols(listOf(okhttp3.Protocol.HTTP_1_1))
             .connectionSpecs(listOf(
                 okhttp3.ConnectionSpec.MODERN_TLS,

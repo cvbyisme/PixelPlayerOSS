@@ -2,6 +2,7 @@ package com.lostf1sh.pixelplayeross.data.musicbrainz
 
 import android.os.SystemClock
 import com.lostf1sh.pixelplayeross.BuildConfig
+import com.lostf1sh.pixelplayeross.data.network.NetworkGate
 import java.io.IOException
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -54,6 +55,8 @@ class MusicBrainzApiService @Inject constructor(
         album: String?,
         durationMs: Long?
     ): List<MusicBrainzMatch> = requestMutex.withLock {
+        // Online lookup only; with the network switch off this is not an error, just no match.
+        if (!NetworkGate.isEnabled()) return@withLock emptyList()
         val elapsed = SystemClock.elapsedRealtime() - lastRequestStartedAt
         if (elapsed in 0 until MIN_REQUEST_INTERVAL_MS) {
             delay(MIN_REQUEST_INTERVAL_MS - elapsed)

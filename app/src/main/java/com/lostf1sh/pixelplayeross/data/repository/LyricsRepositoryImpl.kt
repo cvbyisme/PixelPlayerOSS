@@ -12,6 +12,7 @@ import com.kyant.taglib.TagLib
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.data.database.MusicDao
 import com.lostf1sh.pixelplayeross.data.model.Lyrics
+import com.lostf1sh.pixelplayeross.data.network.NetworkGate
 import com.lostf1sh.pixelplayeross.data.model.SyncedLine
 import com.lostf1sh.pixelplayeross.data.model.LyricsSourcePreference
 import com.lostf1sh.pixelplayeross.data.model.Song
@@ -441,6 +442,8 @@ class LyricsRepositoryImpl @Inject constructor(
      * Fetches lyrics from LRCLIB API with rate limiting (matching Rhythm)
      */
     private suspend fun fetchLyricsFromAPI(song: Song): Lyrics? = withContext(Dispatchers.IO) {
+        // Offline by choice: report "no lyrics" instead of surfacing a network error.
+        if (!NetworkGate.isEnabled()) return@withContext null
         val cachedJson = loadLocalLyricsJson(song)
         if (cachedJson != null) {
             Timber.tag(TAG).d("===== LOADED LYRICS FROM JSON DISK CACHE =====")

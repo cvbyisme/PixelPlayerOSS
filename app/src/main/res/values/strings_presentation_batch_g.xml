@@ -487,6 +487,12 @@ Backslash (\) can be used to escape character delimiters.</string>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">What\'s new</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">Carried over from earlier personal builds</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v061_whats_new">
+        <item>New online-features switch in Settings > Behaviour, off by default. While it is off every request to the network fails instantly instead of timing out.</item>
+        <item>Anyone who already had a Navidrome or Jellyfin server keeps online features enabled after upgrading.</item>
+        <item>Server playback reports slow to once every 2 minutes with the screen off, ListenBrainz stats poll 3x less often, and a paused player releases its wake lock immediately.</item>
+        <item>Home-screen widget repaints are coalesced while the screen is off.</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_whats_new">
         <item>Launch animation is now optional: turn it off and the app opens straight into the library.</item>
         <item>Tap-to-open-lyrics on the player cover is on by default.</item>

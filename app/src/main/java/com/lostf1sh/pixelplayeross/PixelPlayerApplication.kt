@@ -15,6 +15,7 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import com.lostf1sh.pixelplayeross.data.diagnostics.AdvancedPerformanceDiagnosticsController
 import com.lostf1sh.pixelplayeross.data.media.SongMetadataEditor
+import com.lostf1sh.pixelplayeross.data.network.NetworkGate
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.playlist.M3uSyncCoordinator
 import com.lostf1sh.pixelplayeross.data.repository.ArtistImageRepository
@@ -64,6 +65,14 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
 
     @Inject
     lateinit var userPreferencesRepository: dagger.Lazy<UserPreferencesRepository>
+    @Inject
+    lateinit var networkPreferencesRepository: dagger.Lazy<com.lostf1sh.pixelplayeross.data.preferences.NetworkPreferencesRepository>
+
+    @Inject
+    lateinit var navidromeRepository: dagger.Lazy<com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository>
+
+    @Inject
+    lateinit var jellyfinRepository: dagger.Lazy<com.lostf1sh.pixelplayeross.data.jellyfin.JellyfinRepository>
 
     @Inject
     lateinit var folderArtworkSettingsCoordinator: dagger.Lazy<FolderArtworkSettingsCoordinator>
@@ -142,6 +151,19 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
         registerActivityLifecycleCallbacks(PhoneOrientationPolicy)
 
         syncManager.get().start()
+
+        // Mirror the local-first network switch into the process-wide gate before anything
+        // that talks to a server gets a chance to run.
+        NetworkGate.bind(startupScope, networkPreferencesRepository.get().networkEnabledFlow)
+        startupScope.launch {
+            // Users who already had a server keep online features on; the key is only written
+            // when it was never set, so later manual toggles always win.
+            val hasExistingServer = runCatching {
+                navidromeRepository.get().isLoggedInFlow.first() ||
+                    jellyfinRepository.get().isLoggedInFlow.first()
+            }.getOrDefault(false)
+            networkPreferencesRepository.get().migrateLegacyServerUsers(hasExistingServer)
+        }
 
         m3uSyncCoordinator.get().start()
 

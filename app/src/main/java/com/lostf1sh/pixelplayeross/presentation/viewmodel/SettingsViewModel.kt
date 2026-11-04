@@ -36,6 +36,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtColorAccuracy
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtPaletteStyle
 import com.lostf1sh.pixelplayeross.data.preferences.CollagePattern
 import com.lostf1sh.pixelplayeross.data.preferences.FullPlayerLoadingTweaks
+import com.lostf1sh.pixelplayeross.data.preferences.NetworkPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.LyricsRepository
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
@@ -77,6 +78,8 @@ data class SettingsUiState(
     val playerUiConfig: PlayerUiConfig = PlayerUiConfig(),
     /** Animated launch sequence; off means the app opens straight into the library. */
     val animatedSplashEnabled: Boolean = true,
+    /** Online features (servers, lyrics lookup, scrobbling, update checks); local-first default off. */
+    val networkEnabled: Boolean = false,
     /** Optional ARGB backdrop for the library screen; null follows the dynamic theme. */
     val libraryBackgroundColor: Int? = null,
     val playerThemePreference: String = ThemePreference.ALBUM_ART,
@@ -205,6 +208,7 @@ private sealed interface SettingsUiUpdate {
 class SettingsViewModel @Inject constructor(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val themePreferencesRepository: ThemePreferencesRepository,
+    private val networkPreferencesRepository: NetworkPreferencesRepository,
     private val colorSchemeProcessor: ColorSchemeProcessor,
     private val syncManager: SyncManager,
     private val lyricsRepository: LyricsRepository,
@@ -284,6 +288,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.playerUiConfigFlow.collect { config ->
                 _uiState.update { it.copy(playerUiConfig = config) }
+            }
+        }
+        viewModelScope.launch {
+            networkPreferencesRepository.networkEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(networkEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -706,6 +715,10 @@ class SettingsViewModel @Inject constructor(
     }
     fun setAnimatedSplashEnabled(enabled: Boolean) {
         viewModelScope.launch { themePreferencesRepository.setAnimatedSplashEnabled(enabled) }
+    }
+    /** Turns every online feature on or off; the OkHttp gate picks this up immediately. */
+    fun setNetworkEnabled(enabled: Boolean) {
+        viewModelScope.launch { networkPreferencesRepository.setNetworkEnabled(enabled) }
     }
     fun setLibraryBackgroundColor(argb: Int?) {
         viewModelScope.launch { themePreferencesRepository.setLibraryBackgroundColor(argb) }

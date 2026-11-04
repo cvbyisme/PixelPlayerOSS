@@ -486,6 +486,12 @@
 
     <string name="presentation_batch_g_changelog_sec_whats_new">新增功能</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">此前个人版已包含</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v061_whats_new">
+        <item>设置 → 行为新增「联网功能」开关，默认关闭；关闭时所有出网请求立即失败，不再等到超时。</item>
+        <item>已配置过 Navidrome / Jellyfin 服务器的用户升级后自动保持联网功能开启。</item>
+        <item>熄屏后服务器播放进度上报降到 2 分钟一次，ListenBrainz 统计轮询降至 1/3，暂停即释放唤醒锁。</item>
+        <item>熄屏时桌面小组件刷新合并，减少无意义重绘。</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_whats_new">
         <item>开屏启动动画改为可选项，关闭后直接进入音乐库。</item>
         <item>播放页点击封面打开歌词默认开启。</item>
