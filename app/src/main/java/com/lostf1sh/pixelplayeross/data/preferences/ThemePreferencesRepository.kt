@@ -32,6 +32,19 @@ class ThemePreferencesRepository @Inject constructor(
         val PLAYER_BLURRED_COVER_BG = booleanPreferencesKey("player_blurred_cover_bg_v1")
         val PLAYER_BG_SCRIM = intPreferencesKey("player_bg_scrim_v1")
         val PLAYER_CONTROLS_STYLE = stringPreferencesKey("player_controls_style_v1")
+        val PLAYER_CONTROLS_SHAPE = stringPreferencesKey("player_controls_shape_v1")
+        val ANIMATED_SPLASH_ENABLED = booleanPreferencesKey("animated_splash_enabled_v1")
+        val LIBRARY_BACKGROUND_COLOR = intPreferencesKey("library_background_color_v1")
+    }
+
+    /** Animated launch animation; users who prefer an instant start can turn it off. */
+    val animatedSplashEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[Keys.ANIMATED_SPLASH_ENABLED] ?: true
+    }
+
+    /** Optional solid backdrop for the library screen; null keeps the dynamic theme colour. */
+    val libraryBackgroundColorFlow: Flow<Int?> = dataStore.data.map { preferences ->
+        preferences[Keys.LIBRARY_BACKGROUND_COLOR]
     }
 
     /** Custom app-wide background image, plus its blur and dim tuning. */
@@ -57,13 +70,17 @@ class ThemePreferencesRepository @Inject constructor(
     /** Now-playing screen look: cover tap action, background treatment and button palette. */
     val playerUiConfigFlow: Flow<PlayerUiConfig> = dataStore.data.map { preferences ->
         PlayerUiConfig(
-            coverTapOpensLyrics = preferences[Keys.PLAYER_COVER_TAP_LYRICS] ?: false,
+            coverTapOpensLyrics = preferences[Keys.PLAYER_COVER_TAP_LYRICS]
+                ?: PlayerUiConfig().coverTapOpensLyrics,
             blurredCoverBackground = preferences[Keys.PLAYER_BLURRED_COVER_BG] ?: false,
             backgroundScrimPercent = (preferences[Keys.PLAYER_BG_SCRIM]
                 ?: PlayerUiConfig().backgroundScrimPercent).coerceIn(0, PlayerUiConfig.MAX_SCRIM),
             controlsStyle = preferences[Keys.PLAYER_CONTROLS_STYLE]
                 ?.takeIf { it in PlayerControlsStyle.values }
-                ?: PlayerControlsStyle.DEFAULT
+                ?: PlayerControlsStyle.DEFAULT,
+            controlsShape = preferences[Keys.PLAYER_CONTROLS_SHAPE]
+                ?.takeIf { it in PlayerControlsShape.values }
+                ?: PlayerControlsShape.DEFAULT
         )
     }
 
@@ -163,6 +180,26 @@ class ThemePreferencesRepository @Inject constructor(
         dataStore.edit { preferences ->
             preferences[Keys.PLAYER_CONTROLS_STYLE] =
                 if (style in PlayerControlsStyle.values) style else PlayerControlsStyle.DEFAULT
+        }
+
+    suspend fun setPlayerControlsShape(shape: String) =
+        dataStore.edit { preferences ->
+            preferences[Keys.PLAYER_CONTROLS_SHAPE] =
+                if (shape in PlayerControlsShape.values) shape else PlayerControlsShape.DEFAULT
+        }
+
+    suspend fun setAnimatedSplashEnabled(enabled: Boolean) =
+        dataStore.edit { preferences ->
+            preferences[Keys.ANIMATED_SPLASH_ENABLED] = enabled
+        }
+
+    suspend fun setLibraryBackgroundColor(argb: Int?) =
+        dataStore.edit { preferences ->
+            if (argb == null) {
+                preferences.remove(Keys.LIBRARY_BACKGROUND_COLOR)
+            } else {
+                preferences[Keys.LIBRARY_BACKGROUND_COLOR] = argb
+            }
         }
 
 

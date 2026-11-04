@@ -169,6 +169,7 @@ import com.lostf1sh.pixelplayeross.data.backup.model.RestorePlan
 import com.lostf1sh.pixelplayeross.data.model.AudioOutputMode
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
 import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsStyle
+import com.lostf1sh.pixelplayeross.data.preferences.PlayerControlsShape
 import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
 import com.lostf1sh.pixelplayeross.data.preferences.AppLanguage
 import com.lostf1sh.pixelplayeross.data.preferences.AppThemeMode
@@ -689,6 +690,7 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
+                            var showLibraryBackgroundPicker by remember { mutableStateOf(false) }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_global_theme)) {
                                 ThemeSelectorItem(
@@ -743,6 +745,14 @@ fun SettingsCategoryScreen(
                                     onCheckedChange = settingsViewModel::setUseSmoothCorners,
                                     leadingIcon = { Icon(painterResource(R.drawable.rounded_rounded_corner_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_smooth_corners", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_animated_splash_title),
+                                    subtitle = stringResource(R.string.setcat_animated_splash_subtitle),
+                                    checked = uiState.animatedSplashEnabled,
+                                    onCheckedChange = { settingsViewModel.setAnimatedSplashEnabled(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_appearance_animated_splash", highlightKey)
                                 )
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_show_scrollbar_title),
@@ -822,7 +832,33 @@ fun SettingsCategoryScreen(
                                     )
                                 }
                             }
-
+                            SettingsSubsection(title = stringResource(R.string.setcat_library_background_section)) {
+                                SettingsItem(
+                                    title = stringResource(R.string.setcat_library_background_title),
+                                    subtitle = if (uiState.libraryBackgroundColor == null) {
+                                        stringResource(R.string.setcat_library_background_follow_theme)
+                                    } else {
+                                        stringResource(
+                                            R.string.setcat_library_background_custom,
+                                            String.format("#%06X", 0xFFFFFF and uiState.libraryBackgroundColor!!)
+                                        )
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    onClick = { showLibraryBackgroundPicker = true },
+                                    modifier = Modifier.settingHighlight("item_appearance_library_background", highlightKey)
+                                )
+                                if (showLibraryBackgroundPicker) {
+                                    LibraryBackgroundColorDialog(
+                                        initialColor = uiState.libraryBackgroundColor,
+                                        onDismiss = { showLibraryBackgroundPicker = false },
+                                        onColorSelected = { picked ->
+                                            settingsViewModel.setLibraryBackgroundColor(picked)
+                                            showLibraryBackgroundPicker = false
+                                        }
+                                    )
+                                }
+                            }
                             SettingsSubsection(title = stringResource(R.string.setcat_player_appearance)) {
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_player_cover_tap_lyrics_title),
@@ -854,12 +890,29 @@ fun SettingsCategoryScreen(
                                     options = mapOf(
                                         PlayerControlsStyle.DEFAULT to stringResource(R.string.setcat_player_controls_style_default),
                                         PlayerControlsStyle.ACCENT to stringResource(R.string.setcat_player_controls_style_accent),
-                                        PlayerControlsStyle.MONO to stringResource(R.string.setcat_player_controls_style_mono)
+                                        PlayerControlsStyle.MONO to stringResource(R.string.setcat_player_controls_style_mono),
+                                        PlayerControlsStyle.OUTLINE to stringResource(R.string.setcat_player_controls_style_outline),
+                                        PlayerControlsStyle.GLASS to stringResource(R.string.setcat_player_controls_style_glass),
+                                        PlayerControlsStyle.CONTRAST to stringResource(R.string.setcat_player_controls_style_contrast)
                                     ),
                                     selectedKey = uiState.playerUiConfig.controlsStyle,
                                     onSelectionChanged = { settingsViewModel.setPlayerControlsStyle(it) },
                                     leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_player_controls_style", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_player_controls_shape_label),
+                                    description = stringResource(R.string.setcat_player_controls_shape_desc),
+                                    options = mapOf(
+                                        PlayerControlsShape.DEFAULT to stringResource(R.string.setcat_player_controls_shape_default),
+                                        PlayerControlsShape.ROUND to stringResource(R.string.setcat_player_controls_shape_round),
+                                        PlayerControlsShape.PILL to stringResource(R.string.setcat_player_controls_shape_pill),
+                                        PlayerControlsShape.SQUARE to stringResource(R.string.setcat_player_controls_shape_square)
+                                    ),
+                                    selectedKey = uiState.playerUiConfig.controlsShape,
+                                    onSelectionChanged = { settingsViewModel.setPlayerControlsShape(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.CropSquare, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_appearance_player_controls_shape", highlightKey)
                                 )
                             }
 

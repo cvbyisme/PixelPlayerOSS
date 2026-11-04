@@ -130,6 +130,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
+import com.lostf1sh.pixelplayeross.ui.theme.LocalLibraryBackgroundColor
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.media3.common.util.UnstableApi
@@ -812,25 +813,26 @@ fun LibraryScreen(
 
     val primaryContainer = MaterialTheme.colorScheme.primaryContainer
     val onPrimaryContainer = MaterialTheme.colorScheme.onPrimaryContainer
-    val gradientColorsDark = remember(primaryContainer) {
-        listOf(primaryContainer.copy(alpha = 0.5f), Color.Transparent).toImmutableList()
+    // A user-picked library backdrop replaces the dynamic primary-tinted gradient.
+    val customLibraryBackground = LocalLibraryBackgroundColor.current
+    val gradientBaseColor = customLibraryBackground ?: primaryContainer
+    val gradientColorsDark = remember(gradientBaseColor) {
+        listOf(gradientBaseColor.copy(alpha = 0.5f), Color.Transparent).toImmutableList()
     }
-    val gradientColorsLight = remember(onPrimaryContainer) {
-        listOf(onPrimaryContainer.copy(alpha = 0.2f), Color.Transparent).toImmutableList()
+    val gradientColorsLight = remember(gradientBaseColor) {
+        listOf(gradientBaseColor.copy(alpha = 0.2f), Color.Transparent).toImmutableList()
     }
-
     val gradientColors = if (dm) gradientColorsDark else gradientColorsLight
-
     val gradientBrush = remember(gradientColors) {
         Brush.verticalGradient(colors = gradientColors)
     }
-
     val currentTabTitle = visibleCurrentTabId.displayTitle()
 
-    val headerContainerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-
+    val headerContainerColor = gradientBaseColor.copy(alpha = 0.4f)
     Scaffold(
-        modifier = Modifier.background(brush = gradientBrush),
+        modifier = Modifier
+            .background(color = customLibraryBackground ?: Color.Transparent)
+            .background(brush = gradientBrush),
         topBar = {
             Column(
                 modifier = Modifier.background(headerContainerColor)

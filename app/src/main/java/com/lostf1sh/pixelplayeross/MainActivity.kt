@@ -155,6 +155,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
 import timber.log.Timber
 import javax.inject.Inject
@@ -166,6 +168,7 @@ import com.lostf1sh.pixelplayeross.presentation.utils.NoOpHapticFeedback
 import com.lostf1sh.pixelplayeross.utils.CrashLogData
 import javax.annotation.concurrent.Immutable
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
@@ -268,8 +271,15 @@ class MainActivity : ComponentActivity() {
         val isBenchmarkMode = intent.getBooleanExtra("is_benchmark", false)
 
         // The animated splash plays on fresh launches only (not on recreation), and never
-        // when the user has turned animations off or a benchmark is timing startup.
+        // when the user has turned animations off, disabled the launch animation in settings, or
+        // when a benchmark is timing startup.
+        val allowAnimatedSplash = runCatching {
+            runBlocking(Dispatchers.IO) {
+                themePreferencesRepository.animatedSplashEnabledFlow.first()
+            }
+        }.getOrDefault(true)
         val playAnimatedSplash = savedInstanceState == null &&
+            allowAnimatedSplash &&
             !isBenchmarkMode &&
             Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
         if (playAnimatedSplash) {
@@ -309,6 +319,8 @@ class MainActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(initialValue = AppBackgroundConfig())
             val playerUiConfig by themePreferencesRepository.playerUiConfigFlow
                 .collectAsStateWithLifecycle(initialValue = PlayerUiConfig())
+            val libraryBackgroundColor by themePreferencesRepository.libraryBackgroundColorFlow
+                .collectAsStateWithLifecycle(initialValue = null)
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -395,7 +407,8 @@ class MainActivity : ComponentActivity() {
                 colorSchemePairOverride = appWideNowPlayingScheme,
                 themePreset = themePreset,
                 appBackground = appBackground,
-                playerUiConfig = playerUiConfig
+                playerUiConfig = playerUiConfig,
+                libraryBackgroundColor = libraryBackgroundColor?.let { Color(it) }
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(

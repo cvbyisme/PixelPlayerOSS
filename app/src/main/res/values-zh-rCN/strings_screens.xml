@@ -305,6 +305,10 @@
     <string name="about_build_change_background">全局自定义背景：相册选图，可调模糊与暗化</string>
     <string name="about_build_change_transparency">取消界面背景遮罩，壁纸不再被挡住</string>
     <string name="about_build_change_volume">播放页顶部显示媒体音量数字</string>
+    <string name="about_build_change_splash">开屏启动动画可关闭</string>
+    <string name="about_build_change_lyrics">点击封面默认打开歌词</string>
+    <string name="about_build_change_buttons">更多播控按键样式（描边/毛玻璃/反色）与形状</string>
+    <string name="about_build_change_library_bg">音乐库背景颜色可自定义</string>
     <string name="about_build_change_signing">使用个人发布密钥签名</string>
     <string name="about_build_license_note">基于 @lostf1sh 的 PixelPlayerOSS，GPL-3.0 许可，本版改动同样遵循 GPL-3.0。</string>
 </resources>

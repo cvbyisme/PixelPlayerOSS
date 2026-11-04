@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.Layout
@@ -71,6 +73,11 @@ fun AnimatedPlaybackControls(
     tintNextIcon: Color = tintOtherIcons,
     playPauseIconSize: Dp = 36.dp,
     iconSize: Dp = 32.dp,
+    /** Overrides the round silhouette of the skip buttons; null keeps them circular. */
+    otherButtonCorner: Dp? = null,
+    /** Optional hairline around every button, used by the outline style. */
+    borderColor: Color? = null,
+    borderWidth: Dp = 1.5.dp,
 ) {
     val isPlaying = isPlayingProvider()
     var lastClicked by remember { mutableStateOf<PlaybackButtonType?>(null) }
@@ -151,10 +158,18 @@ fun AnimatedPlaybackControls(
             .fillMaxWidth()
             .height(height),
         content = {
+            val skipShape = playbackButtonShape(otherButtonCorner)
             Box(
                 modifier = Modifier
-                    .clip(CircleShape)
+                    .clip(skipShape)
                     .background(colorPreviousButton)
+                    .then(
+                        if (borderColor != null) {
+                            Modifier.border(borderWidth, borderColor, skipShape)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.PREVIOUS
                         onPrevious()
@@ -192,6 +207,26 @@ fun AnimatedPlaybackControls(
                         )
                     }
                     .background(colorPlayPause)
+                    .then(
+                        if (borderColor != null) {
+                            Modifier.border(
+                                borderWidth,
+                                borderColor,
+                                AbsoluteSmoothCornerShape(
+                                    cornerRadiusTL = playCorner,
+                                    smoothnessAsPercentTR = 60,
+                                    cornerRadiusBL = playCorner,
+                                    smoothnessAsPercentTL = 60,
+                                    cornerRadiusTR = playCorner,
+                                    smoothnessAsPercentBL = 60,
+                                    cornerRadiusBR = playCorner,
+                                    smoothnessAsPercentBR = 60
+                                )
+                            )
+                        } else {
+                            Modifier
+                        }
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.PLAY_PAUSE
                         playPauseVisualState = !playPauseVisualState
@@ -212,8 +247,15 @@ fun AnimatedPlaybackControls(
 
             Box(
                 modifier = Modifier
-                    .clip(CircleShape)
+                    .clip(skipShape)
                     .background(colorNextButton)
+                    .then(
+                        if (borderColor != null) {
+                            Modifier.border(borderWidth, borderColor, skipShape)
+                        } else {
+                            Modifier
+                        }
+                    )
                     .clickable {
                         lastClicked = PlaybackButtonType.NEXT
                         onNext()
@@ -255,4 +297,20 @@ fun AnimatedPlaybackControls(
 
 private val ButtonGap = 6.dp
 private const val PLAY_PAUSE_CONFIRM_TIMEOUT_MS = 1_000L
+
+/** Squircle silhouette for the skip buttons, or a plain circle when no corner is given. */
+private fun playbackButtonShape(corner: Dp?): Shape = if (corner == null) {
+    CircleShape
+} else {
+    AbsoluteSmoothCornerShape(
+        cornerRadiusTL = corner,
+        smoothnessAsPercentTR = 60,
+        cornerRadiusBL = corner,
+        smoothnessAsPercentTL = 60,
+        cornerRadiusTR = corner,
+        smoothnessAsPercentBL = 60,
+        cornerRadiusBR = corner,
+        smoothnessAsPercentBR = 60
+    )
+}
 

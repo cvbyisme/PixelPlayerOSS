@@ -486,6 +486,23 @@ Backslash (\) can be used to escape character delimiters.</string>
     </string-array>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">What\'s new</string>
+    <string name="presentation_batch_g_changelog_sec_cvby_cumulative">Carried over from earlier personal builds</string>
+    <string-array name="presentation_batch_g_changelog_cvby_whats_new">
+        <item>Launch animation is now optional: turn it off and the app opens straight into the library.</item>
+        <item>Tap-to-open-lyrics on the player cover is on by default.</item>
+        <item>Transport buttons default to the monochrome palette, with three more styles: outline, glass and contrast.</item>
+        <item>New button silhouettes: soft squircle, round, pill and rounded square.</item>
+        <item>Library background colour can be customised (preset swatches plus hue/saturation/brightness), replacing the dynamic wallpaper tint.</item>
+        <item>Changelog and the About screen now describe this personal build.</item>
+        <item>Merged the latest upstream changes (Jellyfin sync, Daily Mix and fade fixes).</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_cvby_cumulative">
+        <item>Global custom background image with adjustable blur and dim.</item>
+        <item>Per-role translucency so the wallpaper stays visible behind cards and sheets.</item>
+        <item>Adjustable page and container opacity, plus a blurred-cover player background.</item>
+        <item>Numeric media volume in the now-playing top bar.</item>
+        <item>Signed with a personal release key.</item>
+    </string-array>
     <string name="presentation_batch_g_changelog_sec_improvements">Improvements</string>
     <string name="presentation_batch_g_changelog_sec_under_the_hood">Under the hood</string>
     <string-array name="presentation_batch_g_changelog_v020_whats_new">

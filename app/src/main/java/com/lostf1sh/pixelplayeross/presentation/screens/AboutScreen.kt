@@ -546,6 +546,10 @@ private fun AboutBuildCard(modifier: Modifier = Modifier) {
         stringResource(R.string.about_build_change_background),
         stringResource(R.string.about_build_change_transparency),
         stringResource(R.string.about_build_change_volume),
+        stringResource(R.string.about_build_change_splash),
+        stringResource(R.string.about_build_change_lyrics),
+        stringResource(R.string.about_build_change_buttons),
+        stringResource(R.string.about_build_change_library_bg),
         stringResource(R.string.about_build_change_signing),
     )
 

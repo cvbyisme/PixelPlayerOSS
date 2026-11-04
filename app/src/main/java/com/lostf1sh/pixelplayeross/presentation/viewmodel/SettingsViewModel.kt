@@ -75,6 +75,10 @@ data class SettingsUiState(
     val themePreset: String = ThemePreset.DEFAULT,
     val appBackground: AppBackgroundConfig = AppBackgroundConfig(),
     val playerUiConfig: PlayerUiConfig = PlayerUiConfig(),
+    /** Animated launch sequence; off means the app opens straight into the library. */
+    val animatedSplashEnabled: Boolean = true,
+    /** Optional ARGB backdrop for the library screen; null follows the dynamic theme. */
+    val libraryBackgroundColor: Int? = null,
     val playerThemePreference: String = ThemePreference.ALBUM_ART,
     val albumArtPaletteStyle: AlbumArtPaletteStyle = AlbumArtPaletteStyle.default,
     val albumArtColorAccuracy: Int = AlbumArtColorAccuracy.DEFAULT,
@@ -280,6 +284,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.playerUiConfigFlow.collect { config ->
                 _uiState.update { it.copy(playerUiConfig = config) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferencesRepository.animatedSplashEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(animatedSplashEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferencesRepository.libraryBackgroundColorFlow.collect { color ->
+                _uiState.update { it.copy(libraryBackgroundColor = color) }
             }
         }
     }
@@ -686,6 +700,15 @@ class SettingsViewModel @Inject constructor(
 
     fun setPlayerControlsStyle(style: String) {
         viewModelScope.launch { themePreferencesRepository.setPlayerControlsStyle(style) }
+    }
+    fun setPlayerControlsShape(shape: String) {
+        viewModelScope.launch { themePreferencesRepository.setPlayerControlsShape(shape) }
+    }
+    fun setAnimatedSplashEnabled(enabled: Boolean) {
+        viewModelScope.launch { themePreferencesRepository.setAnimatedSplashEnabled(enabled) }
+    }
+    fun setLibraryBackgroundColor(argb: Int?) {
+        viewModelScope.launch { themePreferencesRepository.setLibraryBackgroundColor(argb) }
     }
 
     /**

@@ -329,6 +329,25 @@ fun FullPlayerContent(
         isPlayPause = false
     )
     val transportSkipButtonColors = transportSkipColors
+    // Button silhouette: the smooth squircle morphs between states, while the round / pill / square
+    // options pin every button to one fixed corner radius.
+    val controlsShape = playerUiConfig.controlsShape
+    val skipButtonCorner: Dp? = when (controlsShape) {
+        PlayerControlsShape.PILL -> 999.dp
+        PlayerControlsShape.SQUARE -> 20.dp
+        else -> null
+    }
+    val playPauseCornerPlaying = when (controlsShape) {
+        PlayerControlsShape.ROUND, PlayerControlsShape.PILL -> 999.dp
+        PlayerControlsShape.SQUARE -> 20.dp
+        else -> 60.dp
+    }
+    val playPauseCornerPaused = when (controlsShape) {
+        PlayerControlsShape.ROUND, PlayerControlsShape.PILL -> 999.dp
+        PlayerControlsShape.SQUARE -> 20.dp
+        else -> 26.dp
+    }
+    val transportBorderColor = transportSkipColors.border
     val progressActiveColor = playerOnBaseColor
 
     val placeholderColor = playerOnBaseColor.copy(alpha = 0.1f)
@@ -592,6 +611,10 @@ fun FullPlayerContent(
             onNext = onNextWithOptimisticCarousel,
             transportPlayPauseColors = transportPlayPauseColors,
             transportSkipColors = transportSkipButtonColors,
+            skipButtonCorner = skipButtonCorner,
+            playPauseCornerPlaying = playPauseCornerPlaying,
+            playPauseCornerPaused = playPauseCornerPaused,
+            transportBorderColor = transportBorderColor,
             isShuffleEnabledProvider = isShuffleEnabledProvider,
             shuffleTransitionInProgress = shuffleTransitionInProgress,
             repeatModeProvider = repeatModeProvider,
@@ -1061,6 +1084,10 @@ private fun FullPlayerControlsSection(
     onNext: () -> Unit,
     transportPlayPauseColors: TransportButtonColors,
     transportSkipColors: TransportButtonColors,
+    skipButtonCorner: Dp?,
+    playPauseCornerPlaying: Dp,
+    playPauseCornerPaused: Dp,
+    transportBorderColor: Color?,
     isShuffleEnabledProvider: () -> Boolean,
     shuffleTransitionInProgress: Boolean,
     repeatModeProvider: () -> Int,
@@ -1114,7 +1141,11 @@ private fun FullPlayerControlsSection(
                 colorPreviousButton = transportSkipColors.container,
                 colorNextButton = transportSkipColors.container,
                 tintPreviousIcon = transportSkipColors.content,
-                tintNextIcon = transportSkipColors.content
+                tintNextIcon = transportSkipColors.content,
+                playPauseCornerPlaying = playPauseCornerPlaying,
+                playPauseCornerPaused = playPauseCornerPaused,
+                otherButtonCorner = skipButtonCorner,
+                borderColor = transportBorderColor
             )
 
             Spacer(modifier = Modifier.height(14.dp))
@@ -2432,13 +2463,17 @@ private fun ControlsPlaceholder(color: Color, onColor: Color) {
 
 private data class TransportButtonColors(
     val container: Color,
-    val content: Color
+    val content: Color,
+    /** Hairline drawn around the button; only the outline style uses it. */
+    val border: Color? = null
 )
 
 /**
  * Transport button palette. [PlayerControlsStyle.DEFAULT] keeps the Material 3 expressive fixed
- * tones, [PlayerControlsStyle.ACCENT] paints everything with the album accent, and
- * [PlayerControlsStyle.MONO] falls back to a muted monochrome treatment.
+ * tones, [PlayerControlsStyle.ACCENT] paints everything with the album accent,
+ * [PlayerControlsStyle.MONO] falls back to a muted monochrome treatment, [PlayerControlsStyle.OUTLINE]
+ * draws a bare outline, [PlayerControlsStyle.GLASS] keeps a barely-there frosted fill and
+ * [PlayerControlsStyle.CONTRAST] inverts the buttons against the backdrop.
  */
 @Composable
 private fun styledTransportColors(
@@ -2449,6 +2484,19 @@ private fun styledTransportColors(
     PlayerControlsStyle.ACCENT -> TransportButtonColors(
         container = colorScheme.primary,
         content = colorScheme.onPrimary
+    )
+    PlayerControlsStyle.OUTLINE -> TransportButtonColors(
+        container = Color.Transparent,
+        content = colorScheme.onSurface,
+        border = colorScheme.onSurface.copy(alpha = if (isPlayPause) 0.7f else 0.42f)
+    )
+    PlayerControlsStyle.GLASS -> TransportButtonColors(
+        container = colorScheme.onSurface.copy(alpha = if (isPlayPause) 0.10f else 0.05f),
+        content = colorScheme.onSurface.copy(alpha = 0.92f)
+    )
+    PlayerControlsStyle.CONTRAST -> TransportButtonColors(
+        container = colorScheme.onSurface.copy(alpha = if (isPlayPause) 0.95f else 0.82f),
+        content = colorScheme.surface
     )
     PlayerControlsStyle.MONO -> TransportButtonColors(
         container = colorScheme.onSurface.copy(alpha = if (isPlayPause) 0.18f else 0.10f),

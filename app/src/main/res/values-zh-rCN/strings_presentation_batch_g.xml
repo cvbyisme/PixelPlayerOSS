@@ -485,6 +485,23 @@
     </string-array>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">新增功能</string>
+    <string name="presentation_batch_g_changelog_sec_cvby_cumulative">此前个人版已包含</string>
+    <string-array name="presentation_batch_g_changelog_cvby_whats_new">
+        <item>开屏启动动画改为可选项，关闭后直接进入音乐库。</item>
+        <item>播放页点击封面打开歌词默认开启。</item>
+        <item>播控按键默认使用单色配色，并新增描边、毛玻璃、反色三种样式。</item>
+        <item>新增按键形状：柔和方角、圆形、胶囊、圆角方块。</item>
+        <item>音乐库背景颜色可自定义（预设色板 + 色相/饱和度/明度），不再只能跟随动态取色。</item>
+        <item>更新日志与「关于」页面改为展示本修改版的内容。</item>
+        <item>合并上游最新改动（Jellyfin 同步、Daily Mix、淡入淡出修复等）。</item>
+    </string-array>
+    <string-array name="presentation_batch_g_changelog_cvby_cumulative">
+        <item>全局自定义背景图片，可调模糊与暗化。</item>
+        <item>按角色分层的半透明度，壁纸不再被卡片和弹层挡住。</item>
+        <item>页面与卡片透明度可调，支持封面模糊作为播放页背景。</item>
+        <item>播放页顶部显示媒体音量数字。</item>
+        <item>使用个人发布密钥签名。</item>
+    </string-array>
     <string name="presentation_batch_g_changelog_sec_improvements">优化改进</string>
     <string name="presentation_batch_g_changelog_sec_under_the_hood">底层改动</string>
     <string-array name="presentation_batch_g_changelog_v020_whats_new">

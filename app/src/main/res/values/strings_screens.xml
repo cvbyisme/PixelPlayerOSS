@@ -311,6 +311,10 @@
     <string name="about_build_change_background">Custom app background: pick any picture, with adjustable blur and dim</string>
     <string name="about_build_change_transparency">Page background veils removed so the picture stays visible</string>
     <string name="about_build_change_volume">Numeric media volume in the now-playing top bar</string>
+    <string name="about_build_change_splash">Animated launch screen can be turned off</string>
+    <string name="about_build_change_lyrics">Tapping the cover opens lyrics by default</string>
+    <string name="about_build_change_buttons">More transport button styles (outline, glass, contrast) and shapes</string>
+    <string name="about_build_change_library_bg">Custom library background colour</string>
     <string name="about_build_change_signing">Signed with a personal release key</string>
     <string name="about_build_license_note">Based on PixelPlayerOSS by @lostf1sh. GPL-3.0, which also covers these changes.</string>
 </resources>

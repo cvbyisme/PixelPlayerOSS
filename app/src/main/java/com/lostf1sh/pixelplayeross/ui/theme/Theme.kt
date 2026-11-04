@@ -33,6 +33,8 @@ import androidx.core.graphics.ColorUtils
 val LocalPixelPlayerDarkTheme = staticCompositionLocalOf { false }
 val LocalPixelPlayerAmoledTheme = staticCompositionLocalOf { false }
 val LocalShowScrollbar = staticCompositionLocalOf { true }
+/** Optional solid backdrop for the library screen; null keeps the dynamic theme colour. */
+val LocalLibraryBackgroundColor = staticCompositionLocalOf<Color?> { null }
 
 /**
  * Turns the whole surface family translucent so a custom background image stays visible.
@@ -187,6 +189,7 @@ fun PixelPlayerTheme(
     themePreset: String = ThemePreset.DEFAULT,
     appBackground: AppBackgroundConfig = AppBackgroundConfig(),
     playerUiConfig: PlayerUiConfig = PlayerUiConfig(),
+    libraryBackgroundColor: Color? = null,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -225,7 +228,8 @@ fun PixelPlayerTheme(
         LocalPixelPlayerDarkTheme provides (darkTheme || isAmoled),
         LocalPixelPlayerAmoledTheme provides isAmoled,
         LocalAppBackground provides appBackground,
-        LocalPlayerUiConfig provides playerUiConfig
+        LocalPlayerUiConfig provides playerUiConfig,
+        LocalLibraryBackgroundColor provides libraryBackgroundColor
     ) {
         MaterialTheme(
             colorScheme = appliedColorScheme,

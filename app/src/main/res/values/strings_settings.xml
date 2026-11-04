@@ -418,4 +418,25 @@
     <string name="setcat_player_controls_style_default">Expressive</string>
     <string name="setcat_player_controls_style_accent">Accent</string>
     <string name="setcat_player_controls_style_mono">Mono</string>
+    <string name="setcat_player_controls_style_outline">Outline</string>
+    <string name="setcat_player_controls_style_glass">Glass</string>
+    <string name="setcat_player_controls_style_contrast">Contrast</string>
+    <string name="setcat_player_controls_shape_label">Control buttons shape</string>
+    <string name="setcat_player_controls_shape_desc">Silhouette used for play, pause and skip buttons</string>
+    <string name="setcat_player_controls_shape_default">Soft squircle</string>
+    <string name="setcat_player_controls_shape_round">Round</string>
+    <string name="setcat_player_controls_shape_pill">Pill</string>
+    <string name="setcat_player_controls_shape_square">Rounded square</string>
+    <string name="setcat_animated_splash_title">Animated launch screen</string>
+    <string name="setcat_animated_splash_subtitle">Play the logo animation when the app starts; turn it off to open the library right away</string>
+    <string name="setcat_library_background_section">Library background</string>
+    <string name="setcat_library_background_title">Library background colour</string>
+    <string name="setcat_library_background_follow_theme">Following the dynamic theme colour</string>
+    <string name="setcat_library_background_custom">Custom colour %1$s</string>
+    <string name="setcat_library_background_dialog_title">Library background colour</string>
+    <string name="setcat_library_background_hue">Hue</string>
+    <string name="setcat_library_background_saturation">Saturation</string>
+    <string name="setcat_library_background_brightness">Brightness</string>
+    <string name="setcat_library_background_apply">Apply</string>
+    <string name="setcat_library_background_use_theme">Use theme colour</string>
 </resources>
