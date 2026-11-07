@@ -15,6 +15,8 @@
     <string name="settings_category_appearance_subtitle">主题、布局以及界面样式</string>
     <string name="settings_category_playback_title">播放</string>
     <string name="settings_category_playback_subtitle">音频输出、淡入淡出、后台播放</string>
+    <string name="settings_category_cvby_title">cvby 自定义</string>
+    <string name="settings_category_cvby_subtitle">本修改版专属：硬件 offload、开屏动画、播控按钮</string>
     <string name="settings_category_behavior_title">交互行为</string>
     <string name="settings_category_behavior_subtitle">手势、震动反馈、导航逻辑</string>
     <string name="settings_category_backup_title">备份与恢复</string>
@@ -186,6 +188,10 @@
 
     <string name="setcat_folders">文件夹</string>
     <string name="setcat_network_section">网络</string>
+    <string name="setcat_cvby_appearance_section">外观与播控</string>
+    <string name="setcat_cvby_audio_section">音频引擎</string>
+    <string name="setcat_cvby_audio_offload_title">DSP 按需挂载（硬件 offload）</string>
+    <string name="setcat_cvby_audio_offload_subtitle">默认开启。把解码后的音频交给音频 HAL，经 COMPRESS_OFFLOAD 由 DSP 负责混音，省 CPU 与电量。只有播放卡顿或设备 offload HAL 异常时才需要关闭。</string>
     <string name="setcat_network_enabled_title">联网功能</string>
     <string name="setcat_network_enabled_subtitle">默认关闭。开启后才允许连接服务器（Navidrome / Jellyfin）、在线获取歌词与封面、Scrobble 上报和检查更新；关闭后所有出网请求立即停止。</string>
     <string name="setcat_folder_back_gesture_title">返回键优先操作文件夹</string>

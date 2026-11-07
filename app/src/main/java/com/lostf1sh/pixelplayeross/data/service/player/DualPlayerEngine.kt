@@ -291,6 +291,19 @@ class DualPlayerEngine @Inject constructor(
     private val audioOffloadEnabledForCurrentMode: Boolean
         get() = shouldEnableAudioOffloadForMode(audioOffloadEnabled, audioOutputMode) &&
             buildAudioProcessors().isEmpty()
+
+    /**
+     * cvby: user-facing master switch for the offload path ("DSP on-demand mounting").
+     * Off keeps Media3 on the CPU-side PCM cut; on hands tracks to the HAL through
+     * COMPRESS_OFFLOAD whenever the mode and processor chain allow it.
+     */
+    fun setAudioOffloadEnabled(enabled: Boolean) {
+        if (audioOffloadEnabled == enabled) return
+        audioOffloadEnabled = enabled
+        if (::playerA.isInitialized) {
+            rebuildPlayersPreservingMasterState("Audio offload switched to $enabled")
+        }
+    }
     private val transitionRunTracker = TransitionRunTracker()
     private var transitionJob: Job? = null
     private var bufferingFallbackJob: Job? = null

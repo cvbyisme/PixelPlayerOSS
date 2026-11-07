@@ -23,6 +23,8 @@
     <string name="settings_category_appearance_subtitle">Themes, layout, and visual styles</string>
     <string name="settings_category_playback_title">Playback</string>
     <string name="settings_category_playback_subtitle">Audio behavior, crossfade, and background play</string>
+    <string name="settings_category_cvby_title">cvby tweaks</string>
+    <string name="settings_category_cvby_subtitle">Fork-only extras: offload, launch animation, player buttons</string>
     <string name="settings_category_behavior_title">Behavior</string>
     <string name="settings_category_behavior_subtitle">Gestures, haptics, and navigation behavior</string>
     <string name="settings_category_backup_title">Backup &amp; Restore</string>
@@ -210,6 +212,10 @@
 
     <string name="setcat_folders">Folders</string>
     <string name="setcat_network_section">Network</string>
+    <string name="setcat_cvby_appearance_section">Look &amp; player</string>
+    <string name="setcat_cvby_audio_section">Audio engine</string>
+    <string name="setcat_cvby_audio_offload_title">DSP on-demand (hardware offload)</string>
+    <string name="setcat_cvby_audio_offload_subtitle">On by default. Hands the decoded track to the audio HAL through COMPRESS_OFFLOAD, so the DSP does the mixing instead of the CPU. Turn it off only if playback stutters or the offload HAL misbehaves.</string>
     <string name="setcat_network_enabled_title">Online features</string>
     <string name="setcat_network_enabled_subtitle">Off by default. Turning this on enables servers (Navidrome/Jellyfin), online lyrics and artwork, scrobbling and update checks. Everything that leaves the device stops the moment it is off.</string>
     <string name="setcat_folder_back_gesture_title">Back gesture controls folders</string>

@@ -45,6 +45,7 @@ internal val SettingsCategory.iconTone: SettingsIconTone
         SettingsCategory.LIBRARY -> SettingsIconTone.PRIMARY
         SettingsCategory.APPEARANCE -> SettingsIconTone.TERTIARY
         SettingsCategory.PLAYBACK -> SettingsIconTone.SECONDARY
+        SettingsCategory.CVBY -> SettingsIconTone.TERTIARY
         SettingsCategory.BEHAVIOR -> SettingsIconTone.PRIMARY
         SettingsCategory.BACKUP_RESTORE -> SettingsIconTone.TERTIARY
         SettingsCategory.DEVELOPER -> SettingsIconTone.SECONDARY

@@ -102,6 +102,8 @@ data class SettingsUiState(
     /** Optional processors; off keeps the sink stock so audio offload can engage. */
     val audioHiResSampleRateCap: Boolean = false,
     val audioSurroundDownmix: Boolean = false,
+    /** cvby: master switch for hardware offload (DSP on-demand mounting); on by default. */
+    val audioOffloadEnabled: Boolean = true,
     val pcmFloatOutputSupported: Boolean = true,
     val crossfadeDuration: Int = 2000,
     val persistentShuffleEnabled: Boolean = false,
@@ -301,6 +303,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.audioSurroundDownmixFlow.collect { enabled ->
                 _uiState.update { it.copy(audioSurroundDownmix = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.audioOffloadEnabledFlow.collect { enabled ->
+                _uiState.update { it.copy(audioOffloadEnabled = enabled) }
             }
         }
         viewModelScope.launch {
@@ -734,6 +741,10 @@ class SettingsViewModel @Inject constructor(
     }
     fun setAudioSurroundDownmix(enabled: Boolean) {
         viewModelScope.launch { userPreferencesRepository.setAudioSurroundDownmix(enabled) }
+    }
+    /** cvby: "DSP on-demand mounting" — off forces the CPU-side PCM path. */
+    fun setAudioOffloadEnabled(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setAudioOffloadEnabled(enabled) }
     }
     /** Turns every online feature on or off; the OkHttp gate picks this up immediately. */
     fun setNetworkEnabled(enabled: Boolean) {

@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.lostf1sh.pixelplayeross.R
 
@@ -36,6 +37,13 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_playback_title,
         subtitleRes = R.string.settings_category_playback_subtitle,
         icon = Icons.Rounded.MusicNote
+    ),
+    /** cvby: every fork-only option lives here, so the stock categories stay untouched. */
+    CVBY(
+        id = "cvby",
+        titleRes = R.string.settings_category_cvby_title,
+        subtitleRes = R.string.settings_category_cvby_subtitle,
+        icon = Icons.Rounded.Tune
     ),
     BEHAVIOR(
         id = "behavior",

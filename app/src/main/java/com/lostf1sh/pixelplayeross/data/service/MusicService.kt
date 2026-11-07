@@ -527,6 +527,13 @@ class MusicService : MediaSessionService() {
                     engine.setAudioDspOptions(hiResCap = hiresCap, surroundDownmix = downmix)
                 }
         }
+        serviceScope.launch {
+            // cvby: the "DSP on-demand mounting" switch — on lets the HAL take the track through
+            // COMPRESS_OFFLOAD, off pins playback to the CPU-side float PCM path.
+            userPreferencesRepository.audioOffloadEnabledFlow.collect { enabled ->
+                engine.setAudioOffloadEnabled(enabled)
+            }
+        }
 
         serviceScope.launch {
             userPreferencesRepository.resumeOnHeadsetReconnectFlow.collect { enabled ->

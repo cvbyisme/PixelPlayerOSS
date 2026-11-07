@@ -166,6 +166,7 @@ constructor(
         val AUDIO_OUTPUT_MODE = stringPreferencesKey("audio_output_mode_v1")
         val AUDIO_HIRES_SAMPLE_RATE_CAP = booleanPreferencesKey("audio_hires_rate_cap_v1")
         val AUDIO_SURROUND_DOWNMIX = booleanPreferencesKey("audio_surround_downmix_v1")
+        val AUDIO_OFFLOAD_ENABLED = booleanPreferencesKey("audio_offload_enabled_v1")
         val SMART_CROSSFADE_ENABLED = booleanPreferencesKey("smart_crossfade_enabled")
         val HI_FI_MODE_ENABLED = booleanPreferencesKey("hi_fi_mode_enabled")
         val CROSSFADE_DURATION = intPreferencesKey("crossfade_duration")
@@ -382,6 +383,21 @@ constructor(
     suspend fun setAudioSurroundDownmix(enabled: Boolean) {
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.AUDIO_SURROUND_DOWNMIX] = enabled
+        }
+    }
+
+    /**
+     * cvby: master switch for hardware audio offload ("DSP on-demand mounting"). On, the sink
+     * stays stock Media3 so the HAL can take the track through COMPRESS_OFFLOAD; off forces the
+     * CPU-side float PCM path, which is the fallback for devices whose offload HAL misbehaves.
+     */
+    val audioOffloadEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.AUDIO_OFFLOAD_ENABLED] ?: true
+    }.distinctUntilChanged()
+
+    suspend fun setAudioOffloadEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUDIO_OFFLOAD_ENABLED] = enabled
         }
     }
 

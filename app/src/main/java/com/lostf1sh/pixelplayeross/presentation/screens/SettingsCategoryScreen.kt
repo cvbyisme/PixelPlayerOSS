@@ -753,14 +753,6 @@ fun SettingsCategoryScreen(
                                     modifier = Modifier.settingHighlight("item_appearance_smooth_corners", highlightKey)
                                 )
                                 SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_animated_splash_title),
-                                    subtitle = stringResource(R.string.setcat_animated_splash_subtitle),
-                                    checked = uiState.animatedSplashEnabled,
-                                    onCheckedChange = { settingsViewModel.setAnimatedSplashEnabled(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_animated_splash", highlightKey)
-                                )
-                                SwitchSettingItem(
                                     title = stringResource(R.string.setcat_show_scrollbar_title),
                                     subtitle = stringResource(R.string.setcat_show_scrollbar_subtitle),
                                     checked = uiState.showScrollbar,
@@ -838,42 +830,7 @@ fun SettingsCategoryScreen(
                                     )
                                 }
                             }
-                            SettingsSubsection(title = stringResource(R.string.setcat_library_background_section)) {
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_library_background_title),
-                                    subtitle = if (uiState.libraryBackgroundColor == null) {
-                                        stringResource(R.string.setcat_library_background_follow_theme)
-                                    } else {
-                                        stringResource(
-                                            R.string.setcat_library_background_custom,
-                                            String.format("#%06X", 0xFFFFFF and uiState.libraryBackgroundColor!!)
-                                        )
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { showLibraryBackgroundPicker = true },
-                                    modifier = Modifier.settingHighlight("item_appearance_library_background", highlightKey)
-                                )
-                                if (showLibraryBackgroundPicker) {
-                                    LibraryBackgroundColorDialog(
-                                        initialColor = uiState.libraryBackgroundColor,
-                                        onDismiss = { showLibraryBackgroundPicker = false },
-                                        onColorSelected = { picked ->
-                                            settingsViewModel.setLibraryBackgroundColor(picked)
-                                            showLibraryBackgroundPicker = false
-                                        }
-                                    )
-                                }
-                            }
                             SettingsSubsection(title = stringResource(R.string.setcat_player_appearance)) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_player_cover_tap_lyrics_title),
-                                    subtitle = stringResource(R.string.setcat_player_cover_tap_lyrics_subtitle),
-                                    checked = uiState.playerUiConfig.coverTapOpensLyrics,
-                                    onCheckedChange = { settingsViewModel.setPlayerCoverTapOpensLyrics(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.Style, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_player_cover_tap_lyrics", highlightKey)
-                                )
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_player_blurred_cover_bg_title),
                                     subtitle = stringResource(R.string.setcat_player_blurred_cover_bg_subtitle),
@@ -889,36 +846,6 @@ fun SettingsCategoryScreen(
                                     steps = PlayerUiConfig.MAX_SCRIM - 1,
                                     onValueChange = { settingsViewModel.setPlayerBackgroundScrim(it.toInt()) },
                                     valueText = { "${it.toInt()}%" }
-                                )
-                                ThemeSelectorItem(
-                                    label = stringResource(R.string.setcat_player_controls_style_label),
-                                    description = stringResource(R.string.setcat_player_controls_style_desc),
-                                    options = mapOf(
-                                        PlayerControlsStyle.DEFAULT to stringResource(R.string.setcat_player_controls_style_default),
-                                        PlayerControlsStyle.ACCENT to stringResource(R.string.setcat_player_controls_style_accent),
-                                        PlayerControlsStyle.MONO to stringResource(R.string.setcat_player_controls_style_mono),
-                                        PlayerControlsStyle.OUTLINE to stringResource(R.string.setcat_player_controls_style_outline),
-                                        PlayerControlsStyle.GLASS to stringResource(R.string.setcat_player_controls_style_glass),
-                                        PlayerControlsStyle.CONTRAST to stringResource(R.string.setcat_player_controls_style_contrast)
-                                    ),
-                                    selectedKey = uiState.playerUiConfig.controlsStyle,
-                                    onSelectionChanged = { settingsViewModel.setPlayerControlsStyle(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_player_controls_style", highlightKey)
-                                )
-                                ThemeSelectorItem(
-                                    label = stringResource(R.string.setcat_player_controls_shape_label),
-                                    description = stringResource(R.string.setcat_player_controls_shape_desc),
-                                    options = mapOf(
-                                        PlayerControlsShape.DEFAULT to stringResource(R.string.setcat_player_controls_shape_default),
-                                        PlayerControlsShape.ROUND to stringResource(R.string.setcat_player_controls_shape_round),
-                                        PlayerControlsShape.PILL to stringResource(R.string.setcat_player_controls_shape_pill),
-                                        PlayerControlsShape.SQUARE to stringResource(R.string.setcat_player_controls_shape_square)
-                                    ),
-                                    selectedKey = uiState.playerUiConfig.controlsShape,
-                                    onSelectionChanged = { settingsViewModel.setPlayerControlsShape(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.CropSquare, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_player_controls_shape", highlightKey)
                                 )
                             }
 
@@ -1249,22 +1176,6 @@ fun SettingsCategoryScreen(
                                     modifier = Modifier.settingHighlight("item_playback_audio_output_mode", highlightKey)
                                 )
                                 SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_audio_hires_cap_title),
-                                    subtitle = stringResource(R.string.setcat_audio_hires_cap_subtitle),
-                                    checked = uiState.audioHiResSampleRateCap,
-                                    onCheckedChange = { settingsViewModel.setAudioHiResSampleRateCap(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.GraphicEq, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_playback_audio_hires_cap", highlightKey)
-                                )
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_audio_surround_downmix_title),
-                                    subtitle = stringResource(R.string.setcat_audio_surround_downmix_subtitle),
-                                    checked = uiState.audioSurroundDownmix,
-                                    onCheckedChange = { settingsViewModel.setAudioSurroundDownmix(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.SurroundSound, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_playback_audio_surround_downmix", highlightKey)
-                                )
-                                SwitchSettingItem(
                                     title = stringResource(R.string.setcat_persistent_shuffle_title),
                                     subtitle = stringResource(R.string.setcat_persistent_shuffle_subtitle),
                                     checked = uiState.persistentShuffleEnabled,
@@ -1283,19 +1194,118 @@ fun SettingsCategoryScreen(
                             }
 
                         }
-                        SettingsCategory.BEHAVIOR -> {
-                            SettingsSubsection(
-                                title = stringResource(R.string.setcat_network_section)
-                            ) {
+                        SettingsCategory.CVBY -> {
+                            SettingsSubsection(title = stringResource(R.string.setcat_cvby_appearance_section)) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_animated_splash_title),
+                                    subtitle = stringResource(R.string.setcat_animated_splash_subtitle),
+                                    checked = uiState.animatedSplashEnabled,
+                                    onCheckedChange = { settingsViewModel.setAnimatedSplashEnabled(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.AutoAwesome, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_animated_splash", highlightKey)
+                                )
+                                SettingsItem(
+                                    title = stringResource(R.string.setcat_library_background_title),
+                                    subtitle = if (uiState.libraryBackgroundColor == null) {
+                                        stringResource(R.string.setcat_library_background_follow_theme)
+                                    } else {
+                                        stringResource(
+                                            R.string.setcat_library_background_custom,
+                                            String.format("#%06X", 0xFFFFFF and uiState.libraryBackgroundColor!!)
+                                        )
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    onClick = { showLibraryBackgroundPicker = true },
+                                    modifier = Modifier.settingHighlight("item_cvby_library_background", highlightKey)
+                                )
+                                if (showLibraryBackgroundPicker) {
+                                    LibraryBackgroundColorDialog(
+                                        initialColor = uiState.libraryBackgroundColor,
+                                        onDismiss = { showLibraryBackgroundPicker = false },
+                                        onColorSelected = { picked ->
+                                            settingsViewModel.setLibraryBackgroundColor(picked)
+                                            showLibraryBackgroundPicker = false
+                                        }
+                                    )
+                                }
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_player_cover_tap_lyrics_title),
+                                    subtitle = stringResource(R.string.setcat_player_cover_tap_lyrics_subtitle),
+                                    checked = uiState.playerUiConfig.coverTapOpensLyrics,
+                                    onCheckedChange = { settingsViewModel.setPlayerCoverTapOpensLyrics(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Style, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_player_cover_tap_lyrics", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_player_controls_style_label),
+                                    description = stringResource(R.string.setcat_player_controls_style_desc),
+                                    options = mapOf(
+                                        PlayerControlsStyle.DEFAULT to stringResource(R.string.setcat_player_controls_style_default),
+                                        PlayerControlsStyle.ACCENT to stringResource(R.string.setcat_player_controls_style_accent),
+                                        PlayerControlsStyle.MONO to stringResource(R.string.setcat_player_controls_style_mono),
+                                        PlayerControlsStyle.OUTLINE to stringResource(R.string.setcat_player_controls_style_outline),
+                                        PlayerControlsStyle.GLASS to stringResource(R.string.setcat_player_controls_style_glass),
+                                        PlayerControlsStyle.CONTRAST to stringResource(R.string.setcat_player_controls_style_contrast)
+                                    ),
+                                    selectedKey = uiState.playerUiConfig.controlsStyle,
+                                    onSelectionChanged = { settingsViewModel.setPlayerControlsStyle(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.PlayCircle, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_player_controls_style", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_player_controls_shape_label),
+                                    description = stringResource(R.string.setcat_player_controls_shape_desc),
+                                    options = mapOf(
+                                        PlayerControlsShape.DEFAULT to stringResource(R.string.setcat_player_controls_shape_default),
+                                        PlayerControlsShape.ROUND to stringResource(R.string.setcat_player_controls_shape_round),
+                                        PlayerControlsShape.PILL to stringResource(R.string.setcat_player_controls_shape_pill),
+                                        PlayerControlsShape.SQUARE to stringResource(R.string.setcat_player_controls_shape_square)
+                                    ),
+                                    selectedKey = uiState.playerUiConfig.controlsShape,
+                                    onSelectionChanged = { settingsViewModel.setPlayerControlsShape(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.CropSquare, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_player_controls_shape", highlightKey)
+                                )
+                            }
+                            SettingsSubsection(title = stringResource(R.string.setcat_cvby_audio_section)) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_cvby_audio_offload_title),
+                                    subtitle = stringResource(R.string.setcat_cvby_audio_offload_subtitle),
+                                    checked = uiState.audioOffloadEnabled,
+                                    onCheckedChange = { settingsViewModel.setAudioOffloadEnabled(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.outline_high_quality_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_audio_offload", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_audio_hires_cap_title),
+                                    subtitle = stringResource(R.string.setcat_audio_hires_cap_subtitle),
+                                    checked = uiState.audioHiResSampleRateCap,
+                                    onCheckedChange = { settingsViewModel.setAudioHiResSampleRateCap(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.GraphicEq, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_audio_hires_cap", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_audio_surround_downmix_title),
+                                    subtitle = stringResource(R.string.setcat_audio_surround_downmix_subtitle),
+                                    checked = uiState.audioSurroundDownmix,
+                                    onCheckedChange = { settingsViewModel.setAudioSurroundDownmix(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.SurroundSound, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_audio_surround_downmix", highlightKey)
+                                )
+                            }
+                            SettingsSubsection(title = stringResource(R.string.setcat_network_section)) {
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_network_enabled_title),
                                     subtitle = stringResource(R.string.setcat_network_enabled_subtitle),
                                     checked = uiState.networkEnabled,
                                     onCheckedChange = { settingsViewModel.setNetworkEnabled(it) },
                                     leadingIcon = { Icon(Icons.Outlined.Wifi, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_behavior_network_enabled", highlightKey)
+                                    modifier = Modifier.settingHighlight("item_cvby_network_enabled", highlightKey)
                                 )
                             }
+                        }
+                        SettingsCategory.BEHAVIOR -> {
                             SettingsSubsection(
                                 title = stringResource(R.string.setcat_folders)
                             ) {

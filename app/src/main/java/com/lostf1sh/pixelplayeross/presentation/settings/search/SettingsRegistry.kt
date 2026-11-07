@@ -556,6 +556,110 @@ object SettingsRegistry {
                 keywordsStatic = listOf("library tabs", "pill", "navigation mode", "tab row")
             ),
 
+            // --- CVBY CATEGORY (fork-only extras) ---
+            SettingSpec(
+                id = "cvby_audio_offload",
+                itemKey = "item_cvby_audio_offload",
+                titleRes = R.string.setcat_cvby_audio_offload_title,
+                subtitleRes = R.string.setcat_cvby_audio_offload_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("offload", "dsp", "compress", "hardware", "battery", "pcm", "按需挂载"),
+                getValue = { it.audioOffloadEnabled },
+                onToggle = { viewModel, checked -> viewModel.setAudioOffloadEnabled(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_audio_hires_cap",
+                itemKey = "item_cvby_audio_hires_cap",
+                titleRes = R.string.setcat_audio_hires_cap_title,
+                subtitleRes = R.string.setcat_audio_hires_cap_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("hires", "sample rate", "cap", "dsp", "offload"),
+                getValue = { it.audioHiResSampleRateCap },
+                onToggle = { viewModel, checked -> viewModel.setAudioHiResSampleRateCap(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_audio_surround_downmix",
+                itemKey = "item_cvby_audio_surround_downmix",
+                titleRes = R.string.setcat_audio_surround_downmix_title,
+                subtitleRes = R.string.setcat_audio_surround_downmix_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("surround", "downmix", "dsp", "offload"),
+                getValue = { it.audioSurroundDownmix },
+                onToggle = { viewModel, checked -> viewModel.setAudioSurroundDownmix(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_animated_splash",
+                itemKey = "item_cvby_animated_splash",
+                titleRes = R.string.setcat_animated_splash_title,
+                subtitleRes = R.string.setcat_animated_splash_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("splash", "launch", "animation", "startup", "开屏"),
+                getValue = { it.animatedSplashEnabled },
+                onToggle = { viewModel, checked -> viewModel.setAnimatedSplashEnabled(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_library_background",
+                itemKey = "item_cvby_library_background",
+                titleRes = R.string.setcat_library_background_title,
+                subtitleRes = R.string.setcat_library_background_follow_theme,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("library", "background", "colour", "color", "custom")
+            ),
+            SettingSpec(
+                id = "cvby_player_cover_tap_lyrics",
+                itemKey = "item_cvby_player_cover_tap_lyrics",
+                titleRes = R.string.setcat_player_cover_tap_lyrics_title,
+                subtitleRes = R.string.setcat_player_cover_tap_lyrics_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("cover", "tap", "lyrics", "artwork"),
+                getValue = { it.playerUiConfig.coverTapOpensLyrics },
+                onToggle = { viewModel, checked -> viewModel.setPlayerCoverTapOpensLyrics(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_player_controls_style",
+                itemKey = "item_cvby_player_controls_style",
+                titleRes = R.string.setcat_player_controls_style_label,
+                subtitleRes = R.string.setcat_player_controls_style_desc,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("controls", "buttons", "style", "outline", "glass", "mono")
+            ),
+            SettingSpec(
+                id = "cvby_player_controls_shape",
+                itemKey = "item_cvby_player_controls_shape",
+                titleRes = R.string.setcat_player_controls_shape_label,
+                subtitleRes = R.string.setcat_player_controls_shape_desc,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("controls", "buttons", "shape", "round", "pill", "square")
+            ),
+            SettingSpec(
+                id = "cvby_network_enabled",
+                itemKey = "item_cvby_network_enabled",
+                titleRes = R.string.setcat_network_enabled_title,
+                subtitleRes = R.string.setcat_network_enabled_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("network", "online", "offline", "local first", "联网"),
+                getValue = { it.networkEnabled },
+                onToggle = { viewModel, checked -> viewModel.setNetworkEnabled(checked) }
+            ),
+
             // --- PLAYBACK CATEGORY ---
             SettingSpec(
                 id = "playback_keep_playing",
