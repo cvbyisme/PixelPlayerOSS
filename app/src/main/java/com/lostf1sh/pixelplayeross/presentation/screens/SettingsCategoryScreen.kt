@@ -65,6 +65,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.SurroundSound
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.ClearAll
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -1245,6 +1247,22 @@ fun SettingsCategoryScreen(
                                     },
                                     leadingIcon = { Icon(painterResource(R.drawable.outline_high_quality_24), null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_playback_audio_output_mode", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_audio_hires_cap_title),
+                                    subtitle = stringResource(R.string.setcat_audio_hires_cap_subtitle),
+                                    checked = uiState.audioHiResSampleRateCap,
+                                    onCheckedChange = { settingsViewModel.setAudioHiResSampleRateCap(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.GraphicEq, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_playback_audio_hires_cap", highlightKey)
+                                )
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_audio_surround_downmix_title),
+                                    subtitle = stringResource(R.string.setcat_audio_surround_downmix_subtitle),
+                                    checked = uiState.audioSurroundDownmix,
+                                    onCheckedChange = { settingsViewModel.setAudioSurroundDownmix(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.SurroundSound, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_playback_audio_surround_downmix", highlightKey)
                                 )
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_persistent_shuffle_title),

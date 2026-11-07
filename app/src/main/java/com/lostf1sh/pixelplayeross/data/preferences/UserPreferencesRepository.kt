@@ -164,6 +164,8 @@ constructor(
                 booleanPreferencesKey("keep_screen_awake_while_playing")
         val IS_CROSSFADE_ENABLED = booleanPreferencesKey("is_crossfade_enabled")
         val AUDIO_OUTPUT_MODE = stringPreferencesKey("audio_output_mode_v1")
+        val AUDIO_HIRES_SAMPLE_RATE_CAP = booleanPreferencesKey("audio_hires_rate_cap_v1")
+        val AUDIO_SURROUND_DOWNMIX = booleanPreferencesKey("audio_surround_downmix_v1")
         val SMART_CROSSFADE_ENABLED = booleanPreferencesKey("smart_crossfade_enabled")
         val HI_FI_MODE_ENABLED = booleanPreferencesKey("hi_fi_mode_enabled")
         val CROSSFADE_DURATION = intPreferencesKey("crossfade_duration")
@@ -360,6 +362,26 @@ constructor(
         dataStore.edit { preferences ->
             preferences[PreferencesKeys.AUDIO_OUTPUT_MODE] = mode.storageKey
             preferences.remove(PreferencesKeys.HI_FI_MODE_ENABLED)
+        }
+    }
+    /**
+     * Optional audio processors. Both default to off so the player can hand tracks to the HAL
+     * through COMPRESS_OFFLOAD; any processor in the chain forces a float PCM mixdown.
+     */
+    val audioHiResSampleRateCapFlow: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.AUDIO_HIRES_SAMPLE_RATE_CAP] ?: false
+    }.distinctUntilChanged()
+    val audioSurroundDownmixFlow: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.AUDIO_SURROUND_DOWNMIX] ?: false
+    }.distinctUntilChanged()
+    suspend fun setAudioHiResSampleRateCap(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUDIO_HIRES_SAMPLE_RATE_CAP] = enabled
+        }
+    }
+    suspend fun setAudioSurroundDownmix(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUDIO_SURROUND_DOWNMIX] = enabled
         }
     }
 

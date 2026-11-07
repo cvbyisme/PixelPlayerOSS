@@ -11,6 +11,7 @@ import android.os.SystemClock
 import android.util.LruCache
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes as Media3AudioAttributes
+import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
@@ -264,8 +265,32 @@ class DualPlayerEngine @Inject constructor(
     }
     private var audioOffloadEnabled =
         !shouldDisableAudioOffloadByDefault() && !isAudioOffloadKnownBrokenOnThisBuild()
+    /**
+     * Both processors are opt-in. While they are off the audio sink stays stock Media3, which is
+     * the only way the platform will hand us a COMPRESS_OFFLOAD output; attaching either
+     * processor forces a float PCM mixdown and keeps the CPU awake per buffer.
+     */
+    @Volatile
+    private var hiResSampleRateCapEnabled = false
+    @Volatile
+    private var surroundDownmixEnabled = false
+
+    private fun buildAudioProcessors(): List<AudioProcessor> = buildList {
+        if (hiResSampleRateCapEnabled) add(HiResSampleRateCapAudioProcessor())
+        if (surroundDownmixEnabled) add(SurroundDownmixProcessor())
+    }
+    /** Rebuilds the sink only when an option actually changed; a no-op otherwise. */
+    fun setAudioDspOptions(hiResCap: Boolean, surroundDownmix: Boolean) {
+        if (hiResSampleRateCapEnabled == hiResCap && surroundDownmixEnabled == surroundDownmix) return
+        hiResSampleRateCapEnabled = hiResCap
+        surroundDownmixEnabled = surroundDownmix
+        if (::playerA.isInitialized) {
+            rebuildPlayersPreservingMasterState("Audio DSP options changed (hiresCap=$hiResCap, downmix=$surroundDownmix)")
+        }
+    }
     private val audioOffloadEnabledForCurrentMode: Boolean
-        get() = shouldEnableAudioOffloadForMode(audioOffloadEnabled, audioOutputMode)
+        get() = shouldEnableAudioOffloadForMode(audioOffloadEnabled, audioOutputMode) &&
+            buildAudioProcessors().isEmpty()
     private val transitionRunTracker = TransitionRunTracker()
     private var transitionJob: Job? = null
     private var bufferingFallbackJob: Job? = null
@@ -1071,13 +1096,24 @@ class DualPlayerEngine @Inject constructor(
                         )
                     ) { "Media3 did not create its default AudioSink" }
                 }
+                val audioProcessors = buildAudioProcessors()
+                if (audioProcessors.isEmpty()) {
+                    // Nothing to process: keep the stock sink so the HAL can take the track
+                    // through COMPRESS_OFFLOAD and the CPU can sleep between buffers.
+                    return requireNotNull(
+                        super.buildAudioSink(
+                            context,
+                            false,
+                            enableAudioOutputPlaybackParams
+                        )
+                    ) { "Media3 did not create its default AudioSink" }
+                }
                 return DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(outputMode.usesFloatOutput)
                     .setEnableAudioOutputPlaybackParameters(enableAudioOutputPlaybackParams)
                     .setAudioProcessorChain(
                         DefaultAudioSink.DefaultAudioProcessorChain(
-                            HiResSampleRateCapAudioProcessor(),
-                            SurroundDownmixProcessor()
+                            *audioProcessors.toTypedArray()
                         )
                     )
                     .build()

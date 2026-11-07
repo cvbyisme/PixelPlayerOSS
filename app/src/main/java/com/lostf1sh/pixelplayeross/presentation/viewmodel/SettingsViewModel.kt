@@ -99,6 +99,9 @@ data class SettingsUiState(
     val isCrossfadeEnabled: Boolean = false,
     val smartCrossfadeEnabled: Boolean = false,
     val audioOutputMode: AudioOutputMode = AudioOutputMode.SYSTEM_DEFAULT,
+    /** Optional processors; off keeps the sink stock so audio offload can engage. */
+    val audioHiResSampleRateCap: Boolean = false,
+    val audioSurroundDownmix: Boolean = false,
     val pcmFloatOutputSupported: Boolean = true,
     val crossfadeDuration: Int = 2000,
     val persistentShuffleEnabled: Boolean = false,
@@ -288,6 +291,16 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.playerUiConfigFlow.collect { config ->
                 _uiState.update { it.copy(playerUiConfig = config) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.audioHiResSampleRateCapFlow.collect { enabled ->
+                _uiState.update { it.copy(audioHiResSampleRateCap = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.audioSurroundDownmixFlow.collect { enabled ->
+                _uiState.update { it.copy(audioSurroundDownmix = enabled) }
             }
         }
         viewModelScope.launch {
@@ -715,6 +728,12 @@ class SettingsViewModel @Inject constructor(
     }
     fun setAnimatedSplashEnabled(enabled: Boolean) {
         viewModelScope.launch { themePreferencesRepository.setAnimatedSplashEnabled(enabled) }
+    }
+    fun setAudioHiResSampleRateCap(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setAudioHiResSampleRateCap(enabled) }
+    }
+    fun setAudioSurroundDownmix(enabled: Boolean) {
+        viewModelScope.launch { userPreferencesRepository.setAudioSurroundDownmix(enabled) }
     }
     /** Turns every online feature on or off; the OkHttp gate picks this up immediately. */
     fun setNetworkEnabled(enabled: Boolean) {

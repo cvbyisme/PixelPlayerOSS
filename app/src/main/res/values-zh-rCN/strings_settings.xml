@@ -166,6 +166,10 @@
     <string name="setcat_crossfade_duration">淡入淡出时长</string>
     <string name="setcat_smart_crossfade_title">智能交叉淡化</string>
     <string name="setcat_smart_crossfade_subtitle">当歌曲的 BPM 标签兼容时，根据歌曲节奏调整交叉淡化时长</string>
+    <string name="setcat_audio_hires_cap_title">Hi-Res 采样率上限</string>
+    <string name="setcat_audio_hires_cap_subtitle">把 192kHz 以上的采样率降下来。默认关闭，关闭时播放器可走硬件 offload，CPU 能休眠。</string>
+    <string name="setcat_audio_surround_downmix_title">环绕声降混</string>
+    <string name="setcat_audio_surround_downmix_subtitle">自定义 5.1/7.1 降混。默认关闭：系统混音器本身会降混，开启后会禁用音频 offload。</string>
     <string name="setcat_audio_output_mode_title">音频输出模式</string>
     <string name="setcat_audio_output_mode_description">选择解码后的 PCM 音频交给 Android 的方式。切换模式会短暂重启音频输出。</string>
     <string name="setcat_audio_output_mode_system_default">系统默认</string>

@@ -73,6 +73,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -512,6 +514,18 @@ class MusicService : MediaSessionService() {
             userPreferencesRepository.audioOutputModeFlow.collect { mode ->
                 engine.setAudioOutputMode(mode)
             }
+        }
+        serviceScope.launch {
+            // Off by default: with no processor in the chain the sink stays stock Media3 and the
+            // track can be handed to the HAL through COMPRESS_OFFLOAD.
+            combine(
+                userPreferencesRepository.audioHiResSampleRateCapFlow,
+                userPreferencesRepository.audioSurroundDownmixFlow
+            ) { hiresCap, downmix -> hiresCap to downmix }
+                .distinctUntilChanged()
+                .collect { (hiresCap, downmix) ->
+                    engine.setAudioDspOptions(hiResCap = hiresCap, surroundDownmix = downmix)
+                }
         }
 
         serviceScope.launch {

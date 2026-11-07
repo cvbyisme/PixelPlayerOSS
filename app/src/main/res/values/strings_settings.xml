@@ -190,6 +190,10 @@
     <string name="setcat_crossfade_duration">Crossfade Duration</string>
     <string name="setcat_smart_crossfade_title">Smart crossfade</string>
     <string name="setcat_smart_crossfade_subtitle">Match the crossfade length to the songs\' tempo when their BPM tags are compatible.</string>
+    <string name="setcat_audio_hires_cap_title">Hi-res sample-rate cap</string>
+    <string name="setcat_audio_hires_cap_subtitle">Downsamples anything above 192 kHz. Off by default so the player can use hardware audio offload and keep the CPU asleep.</string>
+    <string name="setcat_audio_surround_downmix_title">Surround downmix processor</string>
+    <string name="setcat_audio_surround_downmix_subtitle">Custom 5.1/7.1 downmix. Off by default; the system mixer already downmixes, and enabling this disables audio offload.</string>
     <string name="setcat_audio_output_mode_title">Audio output mode</string>
     <string name="setcat_audio_output_mode_description">Choose how decoded PCM is sent to Android. Changing mode briefly restarts the audio output.</string>
     <string name="setcat_audio_output_mode_system_default">System default</string>
