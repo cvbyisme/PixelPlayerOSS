@@ -317,4 +317,7 @@
     <string name="about_build_change_library_bg">Custom library background colour</string>
     <string name="about_build_change_signing">Signed with a personal release key</string>
     <string name="about_build_license_note">Based on PixelPlayerOSS by @lostf1sh. GPL-3.0, which also covers these changes.</string>
+    <string name="about_offload_title">DSP on-demand (hardware offload)</string>
+    <string name="about_offload_body">A fork-only switch under Settings → cvby tweaks → Audio engine. When on, the decoded track is handed to the audio HAL through COMPRESS_OFFLOAD, so the DSP does the mixing instead of the CPU — this is what keeps playback cheap on battery. It only engages with the System default output mode and with no extra DSP processor in the chain.</string>
+    <string name="about_offload_note">Off falls back to the CPU-side float PCM path: more compatible, slightly heavier. The Hi-Res sample-rate cap and surround downmix each force that same PCM path, so all three are mutually exclusive — turning one on switches the others off automatically.</string>
 </resources>

@@ -311,4 +311,7 @@
     <string name="about_build_change_library_bg">音乐库背景颜色可自定义</string>
     <string name="about_build_change_signing">使用个人发布密钥签名</string>
     <string name="about_build_license_note">基于 @lostf1sh 的 PixelPlayerOSS，GPL-3.0 许可，本版改动同样遵循 GPL-3.0。</string>
+    <string name="about_offload_title">DSP 按需挂载（硬件 offload）</string>
+    <string name="about_offload_body">本修改版独有的开关，位置在「设置 → cvby 自定义 → 音频引擎」。开启后，解码完成的音频会经 COMPRESS_OFFLOAD 直接交给音频 HAL，由 DSP 完成混音而不用 CPU 逐帧处理，这是省电的关键。只有在「输出模式 = 系统默认」且音频链路上没有额外 DSP 处理器时才会生效。</string>
+    <string name="about_offload_note">关闭后回退到 CPU 侧的 float PCM 通路：兼容性更好，耗电略高。Hi-Res 采样率上限与环绕下混都会强制走同一条 PCM 通路，因此三者互斥——开启其中一个会自动关闭另外两个。</string>
 </resources>
