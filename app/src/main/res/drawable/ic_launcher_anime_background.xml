@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Solid white backdrop: the anime artwork already ships on white, so any launcher mask
+     (circle, squircle, teardrop) keeps the same seamless edge. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#FFFFFF" />
+</shape>

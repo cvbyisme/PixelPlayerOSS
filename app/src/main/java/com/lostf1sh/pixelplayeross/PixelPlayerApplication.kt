@@ -24,6 +24,7 @@ import com.lostf1sh.pixelplayeross.presentation.viewmodel.ThemeStateHolder
 import com.lostf1sh.pixelplayeross.utils.AlbumArtCacheManager
 import com.lostf1sh.pixelplayeross.utils.FolderArtworkSettingsCoordinator
 import com.lostf1sh.pixelplayeross.utils.AppLocaleManager
+import com.lostf1sh.pixelplayeross.utils.AppIconStyle
 import com.lostf1sh.pixelplayeross.utils.CrashHandler
 import com.lostf1sh.pixelplayeross.utils.MediaMetadataRetrieverPool
 import com.lostf1sh.pixelplayeross.utils.PhoneOrientationPolicy
@@ -67,6 +68,8 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
     lateinit var userPreferencesRepository: dagger.Lazy<UserPreferencesRepository>
     @Inject
     lateinit var networkPreferencesRepository: dagger.Lazy<com.lostf1sh.pixelplayeross.data.preferences.NetworkPreferencesRepository>
+    @Inject
+    lateinit var themePreferencesRepository: dagger.Lazy<com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository>
 
     @Inject
     lateinit var navidromeRepository: dagger.Lazy<com.lostf1sh.pixelplayeross.data.navidrome.NavidromeRepository>
@@ -155,6 +158,16 @@ class PixelPlayerApplication : Application(), ImageLoaderFactory, Configuration.
         // Mirror the local-first network switch into the process-wide gate before anything
         // that talks to a server gets a chance to run.
         NetworkGate.bind(startupScope, networkPreferencesRepository.get().networkEnabledFlow)
+        // Keeps the launcher alias in sync with the saved icon choice: the component state survives
+        // reboots and app updates, but a restored backup (or a fresh install over an older build)
+        // can leave the two aliases disagreeing.
+        startupScope.launch {
+            runCatching {
+                themePreferencesRepository.get().appIconStyleFlow.collect { style ->
+                    runCatching { AppIconStyle.apply(this@PixelPlayerApplication, style) }
+                }
+            }
+        }
         startupScope.launch {
             // Users who already had a server keep online features on; the key is only written
             // when it was never set, so later manual toggles always win.

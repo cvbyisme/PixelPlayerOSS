@@ -30,6 +30,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.LyricsWordHighlightStyle
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
+import com.lostf1sh.pixelplayeross.utils.AppIconStyle
 import com.lostf1sh.pixelplayeross.utils.FolderArtworkSettingsCoordinator
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtQuality
 import com.lostf1sh.pixelplayeross.data.preferences.AlbumArtColorAccuracy
@@ -82,6 +83,8 @@ data class SettingsUiState(
     val networkEnabled: Boolean = false,
     /** Optional ARGB backdrop for the library screen; null follows the dynamic theme. */
     val libraryBackgroundColor: Int? = null,
+    /** Launcher icon flavour: [com.lostf1sh.pixelplayeross.utils.AppIconStyle.DEFAULT] or ANIME. */
+    val appIconStyle: String = com.lostf1sh.pixelplayeross.utils.AppIconStyle.DEFAULT,
     val playerThemePreference: String = ThemePreference.ALBUM_ART,
     val albumArtPaletteStyle: AlbumArtPaletteStyle = AlbumArtPaletteStyle.default,
     val albumArtColorAccuracy: Int = AlbumArtColorAccuracy.DEFAULT,
@@ -323,6 +326,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             themePreferencesRepository.libraryBackgroundColorFlow.collect { color ->
                 _uiState.update { it.copy(libraryBackgroundColor = color) }
+            }
+        }
+        viewModelScope.launch {
+            themePreferencesRepository.appIconStyleFlow.collect { style ->
+                _uiState.update { it.copy(appIconStyle = style) }
             }
         }
     }
@@ -692,6 +700,14 @@ class SettingsViewModel @Inject constructor(
     fun setAppBackgroundEnabled(enabled: Boolean) {
         viewModelScope.launch {
             themePreferencesRepository.setAppBackgroundEnabled(enabled)
+        }
+    }
+    /** Persists the choice and re-points the launcher alias so the home screen icon follows. */
+    fun setAppIconStyle(style: String) {
+        viewModelScope.launch {
+            val sanitised = AppIconStyle.sanitize(style)
+            themePreferencesRepository.setAppIconStyle(sanitised)
+            AppIconStyle.apply(context, sanitised)
         }
     }
 

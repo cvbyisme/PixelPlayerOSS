@@ -616,6 +616,59 @@ object SettingsRegistry {
                 keywordsStatic = listOf("library", "background", "colour", "color", "custom")
             ),
             SettingSpec(
+                id = "cvby_custom_background",
+                itemKey = "item_cvby_custom_background",
+                titleRes = R.string.setcat_custom_background_title,
+                subtitleRes = R.string.setcat_custom_background_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("background", "wallpaper", "image", "blur", "dim", "opacity", "背景", "壁纸", "模糊"),
+                getValue = { it.appBackground.isActive },
+                onToggle = { viewModel, checked -> viewModel.setAppBackgroundEnabled(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_custom_background_tuning",
+                itemKey = "item_cvby_custom_background_pick",
+                titleRes = R.string.setcat_custom_background_blur_title,
+                subtitleRes = R.string.setcat_custom_background_page_opacity_title,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("blur", "dim", "opacity", "transparency", "模糊", "暗化", "不透明度")
+            ),
+            SettingSpec(
+                id = "cvby_player_blurred_cover_bg",
+                itemKey = "item_cvby_player_blurred_cover_bg",
+                titleRes = R.string.setcat_player_blurred_cover_bg_title,
+                subtitleRes = R.string.setcat_player_blurred_cover_bg_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("player", "blur", "cover", "background", "播放页", "模糊"),
+                getValue = { it.playerUiConfig.blurredCoverBackground },
+                onToggle = { viewModel, checked -> viewModel.setPlayerBlurredCoverBackground(checked) }
+            ),
+            SettingSpec(
+                id = "cvby_player_scrim",
+                itemKey = "item_cvby_player_scrim",
+                titleRes = R.string.setcat_player_scrim_title,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("scrim", "mask", "dim", "player", "蒙版", "暗化")
+            ),
+            SettingSpec(
+                id = "cvby_app_icon",
+                itemKey = "item_cvby_app_icon",
+                titleRes = R.string.setcat_app_icon_label,
+                subtitleRes = R.string.setcat_app_icon_desc,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("icon", "launcher", "anime", "logo", "图标", "启动器")
+            ),
+            SettingSpec(
                 id = "cvby_player_cover_tap_lyrics",
                 itemKey = "item_cvby_player_cover_tap_lyrics",
                 titleRes = R.string.setcat_player_cover_tap_lyrics_title,

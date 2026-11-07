@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import com.lostf1sh.pixelplayeross.utils.AppIconStyle
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +36,14 @@ class ThemePreferencesRepository @Inject constructor(
         val PLAYER_CONTROLS_SHAPE = stringPreferencesKey("player_controls_shape_v1")
         val ANIMATED_SPLASH_ENABLED = booleanPreferencesKey("animated_splash_enabled_v1")
         val LIBRARY_BACKGROUND_COLOR = intPreferencesKey("library_background_color_v1")
+
+        /** Launcher icon flavour: upstream look or the anime one bundled with this fork. */
+        val APP_ICON_STYLE = stringPreferencesKey("app_icon_style_v1")
+    }
+
+    /** Launcher icon flavour; sanitised so an unknown value never breaks the picker. */
+    val appIconStyleFlow: Flow<String> = dataStore.data.map { preferences ->
+        AppIconStyle.sanitize(preferences[Keys.APP_ICON_STYLE])
     }
 
     /** Animated launch animation; users who prefer an instant start can turn it off. */
@@ -191,6 +200,10 @@ class ThemePreferencesRepository @Inject constructor(
     suspend fun setAnimatedSplashEnabled(enabled: Boolean) =
         dataStore.edit { preferences ->
             preferences[Keys.ANIMATED_SPLASH_ENABLED] = enabled
+        }
+    suspend fun setAppIconStyle(style: String) =
+        dataStore.edit { preferences ->
+            preferences[Keys.APP_ICON_STYLE] = AppIconStyle.sanitize(style)
         }
 
     suspend fun setLibraryBackgroundColor(argb: Int?) =

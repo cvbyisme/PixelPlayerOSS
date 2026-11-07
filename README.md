@@ -5,7 +5,7 @@
 <h1 align="center">PixelPlayerOSS · 个人修改版</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.5.0--cvby-4FF0D0?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.6.2--cvby-4FF0D0?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 11+">
   <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="GPLv3">
 </p>
@@ -25,14 +25,21 @@
 这个分支（`personal-cvby`）在上面加了一些**外观自定义**的小功能，代码改动集中在主题层与播放页，播放核心没动。
 
 - 包名：`com.lostf1sh.pixelplayeross`
-- 版本：`0.5.0-cvby`
+- 版本：`0.6.2-cvby`
 - 分支：`personal-cvby`（`main` 保持与上游同步）
+
+> 所有 fork 专属功能集中在 **设置 → cvby 自定义**（外观与播控 / 自定义背景 / 音频引擎 / 网络 四段），上游页面里不再混入这些条目。
 
 ## 相比上游多了什么
 
+### 应用图标
+
+- 设置 → cvby 自定义 → 外观与播控 → **应用图标**：原版 / 动漫风 二选一
+- 实现方式是 manifest 里的两个 activity-alias，切换时只启用其中一个，所以桌面只会出现一个图标；换完桌面可能要过一会儿才刷新
+
 ### 自定义背景
 
-- 设置 → 外观 → 自定义背景：开关、从相册选图
+- 设置 → cvby 自定义 → 自定义背景：开关、从相册选图
 - 图片会复制进应用私有目录，重启、撤销授权都不会丢
 - 模糊程度 0–40、暗化程度 0–85%
 - **页面背景不透明度**、**卡片/面板不透明度** 各 0–100%，自己拿捏壁纸透出多少

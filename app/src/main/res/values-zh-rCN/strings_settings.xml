@@ -188,6 +188,11 @@
 
     <string name="setcat_folders">文件夹</string>
     <string name="setcat_network_section">网络</string>
+    <string name="setcat_cvby_background_section">自定义背景</string>
+    <string name="setcat_app_icon_label">应用图标</string>
+    <string name="setcat_app_icon_desc">「原版」沿用上游的启动器图标；「动漫风」换成这个分支自带的插画图标。切换后桌面可能要过一会儿（或重启桌面）才会刷新。</string>
+    <string name="setcat_app_icon_default">原版</string>
+    <string name="setcat_app_icon_anime">动漫风</string>
     <string name="setcat_cvby_appearance_section">外观与播控</string>
     <string name="setcat_cvby_audio_section">音频引擎</string>
     <string name="setcat_cvby_audio_offload_title">DSP 按需挂载（硬件 offload）</string>

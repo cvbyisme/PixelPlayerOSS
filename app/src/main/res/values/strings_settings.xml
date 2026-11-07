@@ -212,6 +212,11 @@
 
     <string name="setcat_folders">Folders</string>
     <string name="setcat_network_section">Network</string>
+    <string name="setcat_cvby_background_section">Custom background</string>
+    <string name="setcat_app_icon_label">App icon</string>
+    <string name="setcat_app_icon_desc">Original keeps the upstream launcher icon; Anime uses the fork\'s illustrated icon. The home screen may need a moment (or a restart) to repaint.</string>
+    <string name="setcat_app_icon_default">Original</string>
+    <string name="setcat_app_icon_anime">Anime</string>
     <string name="setcat_cvby_appearance_section">Look &amp; player</string>
     <string name="setcat_cvby_audio_section">Audio engine</string>
     <string name="setcat_cvby_audio_offload_title">DSP on-demand (hardware offload)</string>

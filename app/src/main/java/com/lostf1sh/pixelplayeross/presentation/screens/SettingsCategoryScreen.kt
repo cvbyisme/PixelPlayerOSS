@@ -187,6 +187,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.NavBarStyle
 import com.lostf1sh.pixelplayeross.data.preferences.PreviousButtonBehavior
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreference
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
+import com.lostf1sh.pixelplayeross.utils.AppIconStyle
 import com.lostf1sh.pixelplayeross.utils.isIgnoringBatteryOptimizations
 import com.lostf1sh.pixelplayeross.utils.openBatteryOptimizationSettings
 import com.lostf1sh.pixelplayeross.data.model.Song
@@ -759,93 +760,6 @@ fun SettingsCategoryScreen(
                                     leadingIcon = { Icon(Icons.Rounded.UnfoldMore, null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_appearance_show_scrollbar", highlightKey)
                                 )
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_custom_background_title),
-                                    subtitle = stringResource(R.string.setcat_custom_background_subtitle),
-                                    checked = uiState.appBackground.isActive,
-                                    onCheckedChange = { enabled ->
-                                        if (!enabled) {
-                                            settingsViewModel.setAppBackgroundEnabled(false)
-                                        } else if (uiState.appBackground.imagePath == null) {
-                                            appBackgroundPicker.launch("image/*")
-                                        } else {
-                                            settingsViewModel.setAppBackgroundEnabled(true)
-                                        }
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_custom_background", highlightKey)
-                                )
-                                SettingsItem(
-                                    title = stringResource(R.string.setcat_custom_background_pick_title),
-                                    subtitle = if (uiState.appBackground.imagePath == null) {
-                                        stringResource(R.string.setcat_custom_background_pick_desc)
-                                    } else {
-                                        stringResource(R.string.setcat_custom_background_pick_selected)
-                                    },
-                                    leadingIcon = { Icon(Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                                    onClick = { appBackgroundPicker.launch("image/*") },
-                                    modifier = Modifier.settingHighlight("item_appearance_custom_background_pick", highlightKey)
-                                )
-                                if (uiState.appBackground.imagePath != null) {
-                                    SliderSettingsItem(
-                                        label = stringResource(R.string.setcat_custom_background_blur_title),
-                                        value = uiState.appBackground.blurRadius.toFloat(),
-                                        valueRange = 0f..AppBackgroundConfig.MAX_BLUR.toFloat(),
-                                        steps = AppBackgroundConfig.MAX_BLUR - 1,
-                                        onValueChange = { settingsViewModel.setAppBackgroundBlur(it.toInt()) },
-                                        valueText = { it.toInt().toString() }
-                                    )
-                                    SliderSettingsItem(
-                                        label = stringResource(R.string.setcat_custom_background_dim_title),
-                                        value = uiState.appBackground.dimPercent.toFloat(),
-                                        valueRange = 0f..AppBackgroundConfig.MAX_DIM.toFloat(),
-                                        steps = AppBackgroundConfig.MAX_DIM - 1,
-                                        onValueChange = { settingsViewModel.setAppBackgroundDim(it.toInt()) },
-                                        valueText = { "${it.toInt()}%" }
-                                    )
-                                    SliderSettingsItem(
-                                        label = stringResource(R.string.setcat_custom_background_page_opacity_title),
-                                        value = uiState.appBackground.backgroundOpacity.toFloat(),
-                                        valueRange = 0f..AppBackgroundConfig.MAX_OPACITY.toFloat(),
-                                        steps = AppBackgroundConfig.MAX_OPACITY - 1,
-                                        onValueChange = { settingsViewModel.setAppBackgroundOpacity(it.toInt()) },
-                                        valueText = { "${it.toInt()}%" }
-                                    )
-                                    SliderSettingsItem(
-                                        label = stringResource(R.string.setcat_custom_background_card_opacity_title),
-                                        value = uiState.appBackground.containerOpacity.toFloat(),
-                                        valueRange = 0f..AppBackgroundConfig.MAX_OPACITY.toFloat(),
-                                        steps = AppBackgroundConfig.MAX_OPACITY - 1,
-                                        onValueChange = { settingsViewModel.setAppContainerOpacity(it.toInt()) },
-                                        valueText = { "${it.toInt()}%" }
-                                    )
-                                    SettingsItem(
-                                        title = stringResource(R.string.setcat_custom_background_clear_title),
-                                        subtitle = stringResource(R.string.setcat_custom_background_clear_desc),
-                                        leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                        onClick = { settingsViewModel.clearAppBackground() },
-                                        modifier = Modifier.settingHighlight("item_appearance_custom_background_clear", highlightKey)
-                                    )
-                                }
-                            }
-                            SettingsSubsection(title = stringResource(R.string.setcat_player_appearance)) {
-                                SwitchSettingItem(
-                                    title = stringResource(R.string.setcat_player_blurred_cover_bg_title),
-                                    subtitle = stringResource(R.string.setcat_player_blurred_cover_bg_subtitle),
-                                    checked = uiState.playerUiConfig.blurredCoverBackground,
-                                    onCheckedChange = { settingsViewModel.setPlayerBlurredCoverBackground(it) },
-                                    leadingIcon = { Icon(Icons.Outlined.Contrast, null, tint = MaterialTheme.colorScheme.secondary) },
-                                    modifier = Modifier.settingHighlight("item_appearance_player_blurred_cover_bg", highlightKey)
-                                )
-                                SliderSettingsItem(
-                                    label = stringResource(R.string.setcat_player_scrim_title),
-                                    value = uiState.playerUiConfig.backgroundScrimPercent.toFloat(),
-                                    valueRange = 0f..PlayerUiConfig.MAX_SCRIM.toFloat(),
-                                    steps = PlayerUiConfig.MAX_SCRIM - 1,
-                                    onValueChange = { settingsViewModel.setPlayerBackgroundScrim(it.toInt()) },
-                                    valueText = { "${it.toInt()}%" }
-                                )
                             }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_now_playing)) {
@@ -1196,7 +1110,95 @@ fun SettingsCategoryScreen(
                         SettingsCategory.CVBY -> {
                             var showLibraryBackgroundPicker by remember { mutableStateOf(false) }
 
+                            SettingsSubsection(title = stringResource(R.string.setcat_cvby_background_section)) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_custom_background_title),
+                                    subtitle = stringResource(R.string.setcat_custom_background_subtitle),
+                                    checked = uiState.appBackground.isActive,
+                                    onCheckedChange = { enabled ->
+                                        if (!enabled) {
+                                            settingsViewModel.setAppBackgroundEnabled(false)
+                                        } else if (uiState.appBackground.imagePath == null) {
+                                            appBackgroundPicker.launch("image/*")
+                                        } else {
+                                            settingsViewModel.setAppBackgroundEnabled(true)
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_custom_background", highlightKey)
+                                )
+                                SettingsItem(
+                                    title = stringResource(R.string.setcat_custom_background_pick_title),
+                                    subtitle = if (uiState.appBackground.imagePath == null) {
+                                        stringResource(R.string.setcat_custom_background_pick_desc)
+                                    } else {
+                                        stringResource(R.string.setcat_custom_background_pick_selected)
+                                    },
+                                    leadingIcon = { Icon(Icons.Outlined.Image, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    trailingIcon = { Icon(Icons.Rounded.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                    onClick = { appBackgroundPicker.launch("image/*") },
+                                    modifier = Modifier.settingHighlight("item_cvby_custom_background_pick", highlightKey)
+                                )
+                                if (uiState.appBackground.imagePath != null) {
+                                    SliderSettingsItem(
+                                        label = stringResource(R.string.setcat_custom_background_blur_title),
+                                        value = uiState.appBackground.blurRadius.toFloat(),
+                                        valueRange = 0f..AppBackgroundConfig.MAX_BLUR.toFloat(),
+                                        steps = AppBackgroundConfig.MAX_BLUR - 1,
+                                        onValueChange = { settingsViewModel.setAppBackgroundBlur(it.toInt()) },
+                                        valueText = { it.toInt().toString() }
+                                    )
+                                    SliderSettingsItem(
+                                        label = stringResource(R.string.setcat_custom_background_dim_title),
+                                        value = uiState.appBackground.dimPercent.toFloat(),
+                                        valueRange = 0f..AppBackgroundConfig.MAX_DIM.toFloat(),
+                                        steps = AppBackgroundConfig.MAX_DIM - 1,
+                                        onValueChange = { settingsViewModel.setAppBackgroundDim(it.toInt()) },
+                                        valueText = { "${it.toInt()}%" }
+                                    )
+                                    SliderSettingsItem(
+                                        label = stringResource(R.string.setcat_custom_background_page_opacity_title),
+                                        value = uiState.appBackground.backgroundOpacity.toFloat(),
+                                        valueRange = 0f..AppBackgroundConfig.MAX_OPACITY.toFloat(),
+                                        steps = AppBackgroundConfig.MAX_OPACITY - 1,
+                                        onValueChange = { settingsViewModel.setAppBackgroundOpacity(it.toInt()) },
+                                        valueText = { "${it.toInt()}%" }
+                                    )
+                                    SliderSettingsItem(
+                                        label = stringResource(R.string.setcat_custom_background_card_opacity_title),
+                                        value = uiState.appBackground.containerOpacity.toFloat(),
+                                        valueRange = 0f..AppBackgroundConfig.MAX_OPACITY.toFloat(),
+                                        steps = AppBackgroundConfig.MAX_OPACITY - 1,
+                                        onValueChange = { settingsViewModel.setAppContainerOpacity(it.toInt()) },
+                                        valueText = { "${it.toInt()}%" }
+                                    )
+                                    SettingsItem(
+                                        title = stringResource(R.string.setcat_custom_background_clear_title),
+                                        subtitle = stringResource(R.string.setcat_custom_background_clear_desc),
+                                        leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                                        onClick = { settingsViewModel.clearAppBackground() },
+                                        modifier = Modifier.settingHighlight("item_cvby_custom_background_clear", highlightKey)
+                                    )
+                                }
+                            }
+
                             SettingsSubsection(title = stringResource(R.string.setcat_cvby_appearance_section)) {
+                                SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_player_blurred_cover_bg_title),
+                                    subtitle = stringResource(R.string.setcat_player_blurred_cover_bg_subtitle),
+                                    checked = uiState.playerUiConfig.blurredCoverBackground,
+                                    onCheckedChange = { settingsViewModel.setPlayerBlurredCoverBackground(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Contrast, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_player_blurred_cover_bg", highlightKey)
+                                )
+                                SliderSettingsItem(
+                                    label = stringResource(R.string.setcat_player_scrim_title),
+                                    value = uiState.playerUiConfig.backgroundScrimPercent.toFloat(),
+                                    valueRange = 0f..PlayerUiConfig.MAX_SCRIM.toFloat(),
+                                    steps = PlayerUiConfig.MAX_SCRIM - 1,
+                                    onValueChange = { settingsViewModel.setPlayerBackgroundScrim(it.toInt()) },
+                                    valueText = { "${it.toInt()}%" }
+                                )
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_animated_splash_title),
                                     subtitle = stringResource(R.string.setcat_animated_splash_subtitle),
@@ -1267,6 +1269,18 @@ fun SettingsCategoryScreen(
                                     onSelectionChanged = { settingsViewModel.setPlayerControlsShape(it) },
                                     leadingIcon = { Icon(Icons.Outlined.CropSquare, null, tint = MaterialTheme.colorScheme.secondary) },
                                     modifier = Modifier.settingHighlight("item_cvby_player_controls_shape", highlightKey)
+                                )
+                                ThemeSelectorItem(
+                                    label = stringResource(R.string.setcat_app_icon_label),
+                                    description = stringResource(R.string.setcat_app_icon_desc),
+                                    options = mapOf(
+                                        AppIconStyle.DEFAULT to stringResource(R.string.setcat_app_icon_default),
+                                        AppIconStyle.ANIME to stringResource(R.string.setcat_app_icon_anime)
+                                    ),
+                                    selectedKey = uiState.appIconStyle,
+                                    onSelectionChanged = { settingsViewModel.setAppIconStyle(it) },
+                                    leadingIcon = { Icon(Icons.Outlined.Palette, null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_app_icon", highlightKey)
                                 )
                             }
                             SettingsSubsection(title = stringResource(R.string.setcat_cvby_audio_section)) {
