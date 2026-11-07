@@ -696,7 +696,6 @@ fun SettingsCategoryScreen(
                         }
                         SettingsCategory.APPEARANCE -> {
                             val useSmoothCorners by settingsViewModel.useSmoothCorners.collectAsStateWithLifecycle()
-                            var showLibraryBackgroundPicker by remember { mutableStateOf(false) }
 
                             SettingsSubsection(title = stringResource(R.string.setcat_global_theme)) {
                                 ThemeSelectorItem(
@@ -1195,6 +1194,8 @@ fun SettingsCategoryScreen(
 
                         }
                         SettingsCategory.CVBY -> {
+                            var showLibraryBackgroundPicker by remember { mutableStateOf(false) }
+
                             SettingsSubsection(title = stringResource(R.string.setcat_cvby_appearance_section)) {
                                 SwitchSettingItem(
                                     title = stringResource(R.string.setcat_animated_splash_title),
