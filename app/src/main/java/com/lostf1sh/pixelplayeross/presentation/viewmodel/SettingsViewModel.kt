@@ -737,10 +737,18 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { themePreferencesRepository.setAnimatedSplashEnabled(enabled) }
     }
     fun setAudioHiResSampleRateCap(enabled: Boolean) {
-        viewModelScope.launch { userPreferencesRepository.setAudioHiResSampleRateCap(enabled) }
+        viewModelScope.launch {
+            userPreferencesRepository.setAudioHiResSampleRateCap(enabled)
+            // Mutually exclusive with offload: a processor in the chain forces a float PCM
+            // mixdown, so keeping the offload switch on would be a lie.
+            if (enabled) userPreferencesRepository.setAudioOffloadEnabled(false)
+        }
     }
     fun setAudioSurroundDownmix(enabled: Boolean) {
-        viewModelScope.launch { userPreferencesRepository.setAudioSurroundDownmix(enabled) }
+        viewModelScope.launch {
+            userPreferencesRepository.setAudioSurroundDownmix(enabled)
+            if (enabled) userPreferencesRepository.setAudioOffloadEnabled(false)
+        }
     }
     /** cvby: "DSP on-demand mounting" — off forces the CPU-side PCM path. */
     fun setAudioOffloadEnabled(enabled: Boolean) {
