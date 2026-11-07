@@ -486,6 +486,12 @@
 
     <string name="presentation_batch_g_changelog_sec_whats_new">新增功能</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">此前个人版已包含</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v062_whats_new">
+        <item>设置里新增「cvby 自定义」页面：开屏启动动画、音乐库背景色、点击封面开歌词、播控按键样式与形状、音频引擎、联网功能开关，现在都集中在这一处。</item>
+        <item>「DSP 按需挂载（硬件 offload）」变成真正的开关（设置 → cvby 自定义 → 音频引擎，默认开启）。关掉后回退到 CPU 侧的 float PCM 通路。</item>
+        <item>硬件 offload、Hi-Res 采样率上限、环绕下混三者互斥：开启其中一个会自动关闭另外两个，不会再出现开关亮着却没生效的情况。</item>
+        <item>关于页新增说明，解释 offload 开关的作用以及什么情况下该关掉它。</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v061_whats_new">
         <item>设置 → 行为新增「联网功能」开关，默认关闭；关闭时所有出网请求立即失败，不再等到超时。</item>
         <item>已配置过 Navidrome / Jellyfin 服务器的用户升级后自动保持联网功能开启。</item>

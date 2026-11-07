@@ -487,6 +487,12 @@ Backslash (\) can be used to escape character delimiters.</string>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">What\'s new</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">Carried over from earlier personal builds</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v062_whats_new">
+        <item>Settings has a new "cvby tweaks" page: launch animation, library background colour, cover-tap lyrics, player button style and shape, the audio engine and the online-features switch now all live in one place.</item>
+        <item>"DSP on-demand (hardware offload)" is a real switch now (Settings > cvby tweaks > Audio engine, on by default). Turning it off pins playback to the CPU-side float PCM path.</item>
+        <item>Offload, the Hi-Res sample-rate cap and surround downmix are mutually exclusive: switching one on switches the other two off, so no switch can look on while doing nothing.</item>
+        <item>The About page explains what the offload switch does and when to turn it off.</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v061_whats_new">
         <item>New online-features switch in Settings > Behaviour, off by default. While it is off every request to the network fails instantly instead of timing out.</item>
         <item>Anyone who already had a Navidrome or Jellyfin server keeps online features enabled after upgrading.</item>
