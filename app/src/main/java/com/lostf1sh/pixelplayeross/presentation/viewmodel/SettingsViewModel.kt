@@ -744,7 +744,16 @@ class SettingsViewModel @Inject constructor(
     }
     /** cvby: "DSP on-demand mounting" — off forces the CPU-side PCM path. */
     fun setAudioOffloadEnabled(enabled: Boolean) {
-        viewModelScope.launch { userPreferencesRepository.setAudioOffloadEnabled(enabled) }
+        viewModelScope.launch {
+            userPreferencesRepository.setAudioOffloadEnabled(enabled)
+            if (enabled) {
+                // Both processors put a float PCM stage in front of the sink, which silently
+                // costs the COMPRESS_OFFLOAD hand-off. Switching offload on therefore clears
+                // them instead of leaving a switch that looks on but does nothing.
+                userPreferencesRepository.setAudioHiResSampleRateCap(false)
+                userPreferencesRepository.setAudioSurroundDownmix(false)
+            }
+        }
     }
     /** Turns every online feature on or off; the OkHttp gate picks this up immediately. */
     fun setNetworkEnabled(enabled: Boolean) {
