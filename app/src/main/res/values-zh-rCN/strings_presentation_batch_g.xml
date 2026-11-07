@@ -486,6 +486,12 @@
 
     <string name="presentation_batch_g_changelog_sec_whats_new">新增功能</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">此前个人版已包含</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v063_whats_new">
+        <item>自定义背景（选图、模糊、暗化、页面/卡片不透明度）从「外观」移到「cvby 自定义」页，和其他个人功能放在一起。</item>
+        <item>播放页的模糊封面背景、背景蒙版一并移入「cvby 自定义 → 外观与播控」。</item>
+        <item>新增「应用图标」选项：可选原版图标或动漫风图标，任意时刻只启用一个，桌面不会出现两个图标。</item>
+        <item>设置搜索覆盖了全部 cvby 专属项，背景与图标也能直接搜到。</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v062_whats_new">
         <item>设置里新增「cvby 自定义」页面：开屏启动动画、音乐库背景色、点击封面开歌词、播控按键样式与形状、音频引擎、联网功能开关，现在都集中在这一处。</item>
         <item>「DSP 按需挂载（硬件 offload）」变成真正的开关（设置 → cvby 自定义 → 音频引擎，默认开启）。关掉后回退到 CPU 侧的 float PCM 通路。</item>

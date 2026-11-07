@@ -487,6 +487,12 @@ Backslash (\) can be used to escape character delimiters.</string>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">What\'s new</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">Carried over from earlier personal builds</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v063_whats_new">
+        <item>Custom background (image, blur, dim, page/card opacity) moved out of Appearance into the cvby tweaks page, next to the other fork-only settings.</item>
+        <item>The blurred player cover background and the player background scrim moved to cvby tweaks > Look &amp; player.</item>
+        <item>New App icon picker: keep the original launcher icon or switch to the anime one. Only one icon is ever enabled, so the home screen still shows a single entry.</item>
+        <item>Search now covers every fork-only row, including the background and icon settings.</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v062_whats_new">
         <item>Settings has a new "cvby tweaks" page: launch animation, library background colour, cover-tap lyrics, player button style and shape, the audio engine and the online-features switch now all live in one place.</item>
         <item>"DSP on-demand (hardware offload)" is a real switch now (Settings > cvby tweaks > Audio engine, on by default). Turning it off pins playback to the CPU-side float PCM path.</item>
