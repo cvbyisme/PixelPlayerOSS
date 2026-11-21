@@ -167,6 +167,8 @@ constructor(
         val AUDIO_HIRES_SAMPLE_RATE_CAP = booleanPreferencesKey("audio_hires_rate_cap_v1")
         val AUDIO_SURROUND_DOWNMIX = booleanPreferencesKey("audio_surround_downmix_v1")
         val AUDIO_OFFLOAD_ENABLED = booleanPreferencesKey("audio_offload_enabled_v1")
+        /** cvby: high-quality output mode. See UserPreferencesRepository.highQualityModeFlow. */
+        val AUDIO_HIGH_QUALITY_MODE = booleanPreferencesKey("audio_high_quality_mode_v1")
         val SMART_CROSSFADE_ENABLED = booleanPreferencesKey("smart_crossfade_enabled")
         val HI_FI_MODE_ENABLED = booleanPreferencesKey("hi_fi_mode_enabled")
         val CROSSFADE_DURATION = intPreferencesKey("crossfade_duration")
@@ -394,6 +396,33 @@ constructor(
     val audioOffloadEnabledFlow: Flow<Boolean> = dataStore.data.map { preferences ->
         preferences[PreferencesKeys.AUDIO_OFFLOAD_ENABLED] ?: true
     }.distinctUntilChanged()
+
+    /**
+     * cvby: high-quality output mode.
+     *
+     * One switch that asks for the best chain a *regular* app can get. It stacks three
+     * choices that are all genuinely available without root:
+     *
+     *  1. no offload -- forces decoded PCM through Media3 instead of handing the compressed
+     *     bitstream to the vendor HAL. Offload tunnels often truncate to 16-bit or apply their
+     *     own resampling, which a plain app cannot inspect or override;
+     *  2. 32-bit float output -- avoids the 16-bit quantization floor in the mixer path;
+     *  3. anti-aliased downsampling -- for >192 kHz sources, filter before decimating instead
+     *     of the aliasing-prone averaging used before.
+     *
+     * It does NOT and cannot raise the DAC output rate: the system mixer runs at a fixed rate
+     * and that is a platform decision. Tracks the mixer resamples will still be resampled,
+     * which is exactly what the player badge reports.
+     */
+    val highQualityModeFlow: Flow<Boolean> = dataStore.data.map { preferences ->
+        preferences[PreferencesKeys.AUDIO_HIGH_QUALITY_MODE] ?: false
+    }.distinctUntilChanged()
+
+    suspend fun setHighQualityModeEnabled(enabled: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[PreferencesKeys.AUDIO_HIGH_QUALITY_MODE] = enabled
+        }
+    }
 
     suspend fun setAudioOffloadEnabled(enabled: Boolean) {
         dataStore.edit { preferences ->

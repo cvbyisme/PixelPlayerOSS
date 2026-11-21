@@ -510,30 +510,36 @@ class MusicService : MediaSessionService() {
             }
         }
 
+
         serviceScope.launch {
-            userPreferencesRepository.audioOutputModeFlow.collect { mode ->
-                engine.setAudioOutputMode(mode)
-            }
-        }
-        serviceScope.launch {
-            // Off by default: with no processor in the chain the sink stays stock Media3 and the
-            // track can be handed to the HAL through COMPRESS_OFFLOAD.
+            // cvby: high-quality mode is folded into the settings it implies instead of writing
+            // them, so turning it off restores whatever the user had chosen manually.
             combine(
+                userPreferencesRepository.audioOutputModeFlow,
+                userPreferencesRepository.audioOffloadEnabledFlow,
                 userPreferencesRepository.audioHiResSampleRateCapFlow,
-                userPreferencesRepository.audioSurroundDownmixFlow
-            ) { hiresCap, downmix -> hiresCap to downmix }
+                userPreferencesRepository.audioSurroundDownmixFlow,
+                userPreferencesRepository.highQualityModeFlow
+            ) { outputMode, offload, hiresCap, downmix, highQuality ->
+                HighQualityAudioSettings(
+                    outputMode = outputMode,
+                    offload = offload,
+                    hiResCap = hiresCap,
+                    surroundDownmix = downmix,
+                    highQuality = highQuality
+                )
+            }
                 .distinctUntilChanged()
-                .collect { (hiresCap, downmix) ->
-                    engine.setAudioDspOptions(hiResCap = hiresCap, surroundDownmix = downmix)
+                .collect { settings ->
+                    engine.setAudioOutputMode(settings.effectiveOutputMode)
+                    engine.setAudioOffloadEnabled(settings.effectiveOffload)
+                    engine.setAudioDspOptions(
+                        hiResCap = settings.effectiveHiResCap,
+                        surroundDownmix = settings.effectiveSurroundDownmix
+                    )
                 }
         }
-        serviceScope.launch {
-            // cvby: the "DSP on-demand mounting" switch — on lets the HAL take the track through
-            // COMPRESS_OFFLOAD, off pins playback to the CPU-side float PCM path.
-            userPreferencesRepository.audioOffloadEnabledFlow.collect { enabled ->
-                engine.setAudioOffloadEnabled(enabled)
-            }
-        }
+
 
         serviceScope.launch {
             userPreferencesRepository.resumeOnHeadsetReconnectFlow.collect { enabled ->

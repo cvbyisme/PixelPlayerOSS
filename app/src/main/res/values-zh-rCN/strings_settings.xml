@@ -195,6 +195,8 @@
     <string name="setcat_app_icon_anime">动漫风</string>
     <string name="setcat_cvby_appearance_section">外观与播控</string>
     <string name="setcat_cvby_audio_section">音频引擎</string>
+    <string name="setcat_cvby_high_quality_title">高音质模式</string>
+    <string name="setcat_cvby_high_quality_subtitle">在应用内解码并以 32 位浮点 PCM 输出，不把码流交给 offload 通道；超过 192 kHz 的音源在降采样前先做抗混叠滤波。这样能消除应用真正能控制的量化损失与混叠失真。它无法提高 DAC 输出采样率：系统混音器的采样率由平台固定，播放页徽章显示的是实际发生的结果。</string>
     <string name="setcat_cvby_audio_offload_title">DSP 按需挂载（硬件 offload）</string>
     <string name="setcat_cvby_audio_offload_subtitle">默认开启。把解码后的音频交给音频 HAL，经 COMPRESS_OFFLOAD 由 DSP 负责混音，省 CPU 与电量。只有播放卡顿或设备 offload HAL 异常时才需要关闭。</string>
     <string name="setcat_network_enabled_title">联网功能</string>

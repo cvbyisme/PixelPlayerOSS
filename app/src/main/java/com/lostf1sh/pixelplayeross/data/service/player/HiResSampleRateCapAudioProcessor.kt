@@ -20,21 +20,36 @@ class HiResSampleRateCapAudioProcessor(
     private val maxOutputSampleRateHz: Int = 192_000
 ) : AudioProcessor {
 
+    /**
+     * cvby: decimation needs a low-pass first.
+     *
+     * The previous implementation averaged every [downsampleFactor] input frames (a box filter).
+     * That is a poor anti-alias filter: content above the new Nyquist folds back into the
+     * audible band as aliasing, which sounds like gritty/harsh treble -- exactly the opposite of
+     * what a hi-res downsampler should do. Every sample is now run through a one-pole high-cut
+     * IIR whose corner sits below the output Nyquist before being decimated, so out-of-band
+     * energy is attenuated instead of reflected.
+     */
     private companion object {
         private val NATIVE_ORDER = ByteOrder.nativeOrder()
         private val NATIVE_ORDER_IS_BIG_ENDIAN = NATIVE_ORDER == ByteOrder.BIG_ENDIAN
+
+        /** Corner frequency as a fraction of the *output* Nyquist (must stay below 1.0). */
+        private const val LOWPASS_PASSBAND_RATIO = 0.45
     }
 
     private var inputFormat: AudioFormat = AudioFormat.NOT_SET
     private var outputFormat: AudioFormat = AudioFormat.NOT_SET
     private var downsampleFactor: Int = 1
+    // One-pole low-pass state, one value per channel. Applied before decimation so energy
+    // above the output Nyquist is attenuated rather than aliased back into the audible band.
+    private var lowpassCoefficient: Float = 0f
+    private var lowpassState = FloatArray(0)
     // Retain storage when getOutput() clears the pending output reference.
     private var reusableBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var outputBuffer: ByteBuffer = AudioProcessor.EMPTY_BUFFER
     private var pendingBytes = ByteArray(0)
     private var pendingSize = 0
-    private var shortAccumulators = IntArray(0)
-    private var floatAccumulators = FloatArray(0)
     private var inputEnded = false
 
     override fun configure(inputAudioFormat: AudioFormat): AudioFormat {
@@ -60,9 +75,21 @@ class HiResSampleRateCapAudioProcessor(
             inputAudioFormat.channelCount,
             inputAudioFormat.encoding
         )
+        // Corner = LOWPASS_PASSBAND_RATIO * (output rate / 2), expressed relative to the input
+        // rate because the filter runs at the input rate.
+        //   fc/fs_in = LOWPASS_PASSBAND_RATIO * outputRate / (2 * inputRate)
+        // One-pole: y[n] = y[n-1] + a * (x[n] - y[n-1]), a = 1 - exp(-2*pi*fc/fs).
+        val inputRate = inputAudioFormat.sampleRate.toDouble()
+        val normalizedCorner = LOWPASS_PASSBAND_RATIO.toDouble() *
+            (outputFormat.sampleRate / 2.0) / inputRate
+        lowpassCoefficient = if (normalizedCorner > 0.0 && normalizedCorner < 0.5) {
+            (1.0 - kotlin.math.exp(-2.0 * Math.PI * normalizedCorner)).toFloat()
+        } else {
+            1f
+        }
+        lowpassState = FloatArray(inputAudioFormat.channelCount)
         pendingSize = 0
         ensurePendingCapacity(maxPendingBytes())
-        ensureAccumulatorCapacity(inputAudioFormat.channelCount)
         return outputFormat
     }
 
@@ -93,25 +120,28 @@ class HiResSampleRateCapAudioProcessor(
         var pendingReadOffset = 0
 
         repeat(processableFrameCount) {
-            java.util.Arrays.fill(shortAccumulators, 0)
+            // Same anti-alias approach as the float path: filter every input frame, then emit the
+            // last filtered value of each decimation group.
             repeat(downsampleFactor) {
-                if (pendingReadOffset < pendingSize) {
-                    for (ch in 0 until inputFormat.channelCount) {
-                        shortAccumulators[ch] += readShortFromPending(pendingReadOffset).toInt()
+                for (ch in 0 until inputFormat.channelCount) {
+                    val x = if (pendingReadOffset < pendingSize) {
+                        val v = readShortFromPending(pendingReadOffset).toFloat()
                         pendingReadOffset += Short.SIZE_BYTES
+                        v
+                    } else {
+                        shortInput.short.toFloat()
                     }
-                } else {
-                    for (ch in 0 until inputFormat.channelCount) {
-                        shortAccumulators[ch] += shortInput.short.toInt()
-                    }
+                    val previous = lowpassState[ch]
+                    lowpassState[ch] = previous + lowpassCoefficient * (x - previous)
                 }
             }
             for (ch in 0 until inputFormat.channelCount) {
-                outputBuffer.putShort(
-                    (shortAccumulators[ch] / downsampleFactor)
-                        .coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-                        .toShort()
+                // Back to 16-bit; clamp instead of wrapping on overshoot.
+                val sample = lowpassState[ch].coerceIn(
+                    Short.MIN_VALUE.toFloat(),
+                    Short.MAX_VALUE.toFloat()
                 )
+                outputBuffer.putShort(sample.toInt().toShort())
             }
         }
         storePendingRemainder(pendingReadOffset, shortInput)
@@ -133,21 +163,23 @@ class HiResSampleRateCapAudioProcessor(
         var pendingReadOffset = 0
 
         repeat(processableFrameCount) {
-            java.util.Arrays.fill(floatAccumulators, 0f)
+            // Run every input frame through the low-pass, then emit the final filtered value of
+            // each decimation group. Filtering before dropping samples is what prevents aliasing.
             repeat(downsampleFactor) {
-                if (pendingReadOffset < pendingSize) {
-                    for (ch in 0 until inputFormat.channelCount) {
-                        floatAccumulators[ch] += readFloatFromPending(pendingReadOffset)
+                for (ch in 0 until inputFormat.channelCount) {
+                    val x = if (pendingReadOffset < pendingSize) {
+                        val v = readFloatFromPending(pendingReadOffset)
                         pendingReadOffset += Float.SIZE_BYTES
+                        v
+                    } else {
+                        floatInput.float
                     }
-                } else {
-                    for (ch in 0 until inputFormat.channelCount) {
-                        floatAccumulators[ch] += floatInput.float
-                    }
+                    val previous = lowpassState[ch]
+                    lowpassState[ch] = previous + lowpassCoefficient * (x - previous)
                 }
             }
             for (ch in 0 until inputFormat.channelCount) {
-                outputBuffer.putFloat((floatAccumulators[ch] / downsampleFactor).coerceIn(-1f, 1f))
+                outputBuffer.putFloat(lowpassState[ch].coerceIn(-1f, 1f))
             }
         }
         storePendingRemainder(pendingReadOffset, floatInput)
@@ -167,15 +199,6 @@ class HiResSampleRateCapAudioProcessor(
     private fun ensurePendingCapacity(requiredCapacity: Int) {
         if (pendingBytes.size >= requiredCapacity) return
         pendingBytes = pendingBytes.copyOf(requiredCapacity.coerceAtLeast(pendingBytes.size * 2).coerceAtLeast(1))
-    }
-
-    private fun ensureAccumulatorCapacity(channelCount: Int) {
-        if (shortAccumulators.size < channelCount) {
-            shortAccumulators = IntArray(channelCount)
-        }
-        if (floatAccumulators.size < channelCount) {
-            floatAccumulators = FloatArray(channelCount)
-        }
     }
 
     private fun ensureOutputBuffer(requiredCapacity: Int): ByteBuffer {
@@ -258,6 +281,9 @@ class HiResSampleRateCapAudioProcessor(
         outputBuffer = AudioProcessor.EMPTY_BUFFER
         pendingSize = 0
         inputEnded = false
+        // Drop filter memory so a seek does not bleed the previous position's tail into the
+        // new one.
+        java.util.Arrays.fill(lowpassState, 0f)
     }
 
     override fun reset() {
@@ -268,5 +294,7 @@ class HiResSampleRateCapAudioProcessor(
         inputFormat = AudioFormat.NOT_SET
         outputFormat = AudioFormat.NOT_SET
         downsampleFactor = 1
+        lowpassCoefficient = 0f
+        lowpassState = FloatArray(0)
     }
 }

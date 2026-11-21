@@ -1285,6 +1285,14 @@ fun SettingsCategoryScreen(
                             }
                             SettingsSubsection(title = stringResource(R.string.setcat_cvby_audio_section)) {
                                 SwitchSettingItem(
+                                    title = stringResource(R.string.setcat_cvby_high_quality_title),
+                                    subtitle = stringResource(R.string.setcat_cvby_high_quality_subtitle),
+                                    checked = uiState.audioHighQualityMode,
+                                    onCheckedChange = { settingsViewModel.setAudioHighQualityModeEnabled(it) },
+                                    leadingIcon = { Icon(painterResource(R.drawable.rounded_audio_file_24), null, tint = MaterialTheme.colorScheme.secondary) },
+                                    modifier = Modifier.settingHighlight("item_cvby_audio_high_quality", highlightKey)
+                                )
+                                SwitchSettingItem(
                                     title = stringResource(R.string.setcat_cvby_audio_offload_title),
                                     subtitle = stringResource(R.string.setcat_cvby_audio_offload_subtitle),
                                     checked = uiState.audioOffloadEnabled,

@@ -107,6 +107,8 @@ data class SettingsUiState(
     val audioSurroundDownmix: Boolean = false,
     /** cvby: master switch for hardware offload (DSP on-demand mounting); on by default. */
     val audioOffloadEnabled: Boolean = true,
+    /** cvby: one switch for the best chain a plain app can get; see HighQualityAudioSettings. */
+    val audioHighQualityMode: Boolean = false,
     val pcmFloatOutputSupported: Boolean = true,
     val crossfadeDuration: Int = 2000,
     val persistentShuffleEnabled: Boolean = false,
@@ -311,6 +313,11 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             userPreferencesRepository.audioOffloadEnabledFlow.collect { enabled ->
                 _uiState.update { it.copy(audioOffloadEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.highQualityModeFlow.collect { enabled ->
+                _uiState.update { it.copy(audioHighQualityMode = enabled) }
             }
         }
         viewModelScope.launch {
@@ -769,6 +776,13 @@ class SettingsViewModel @Inject constructor(
     /** cvby: "DSP on-demand mounting" — off forces the CPU-side PCM path. */
     fun setAudioOffloadEnabled(enabled: Boolean) {
         viewModelScope.launch {
+            if (enabled) {
+                // Offload and high-quality mode are mutually exclusive: HQ mode needs decoded
+                // PCM so it can control bit depth, and offload hands the bitstream to the HAL.
+                // Turning offload on therefore turns HQ mode off rather than leaving two
+                // switches that contradict each other.
+                userPreferencesRepository.setHighQualityModeEnabled(false)
+            }
             userPreferencesRepository.setAudioOffloadEnabled(enabled)
             if (enabled) {
                 // Both processors put a float PCM stage in front of the sink, which silently
@@ -776,6 +790,17 @@ class SettingsViewModel @Inject constructor(
                 // them instead of leaving a switch that looks on but does nothing.
                 userPreferencesRepository.setAudioHiResSampleRateCap(false)
                 userPreferencesRepository.setAudioSurroundDownmix(false)
+            }
+        }
+    }
+    /** cvby: one switch for the best chain a plain app can get. */
+    fun setAudioHighQualityModeEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            userPreferencesRepository.setHighQualityModeEnabled(enabled)
+            if (enabled) {
+                // Keep the stored switches consistent with what HQ mode is doing, so the
+                // individual toggles do not show a state that is being overridden.
+                userPreferencesRepository.setAudioOffloadEnabled(false)
             }
         }
     }

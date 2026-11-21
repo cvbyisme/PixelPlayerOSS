@@ -219,6 +219,8 @@
     <string name="setcat_app_icon_anime">Anime</string>
     <string name="setcat_cvby_appearance_section">Look &amp; player</string>
     <string name="setcat_cvby_audio_section">Audio engine</string>
+    <string name="setcat_cvby_high_quality_title">High-quality mode</string>
+    <string name="setcat_cvby_high_quality_subtitle">Decodes in-app and outputs 32-bit float PCM instead of handing the bitstream to the offload tunnel, and anti-aliases anything above 192 kHz before downsampling. This removes quantization and aliasing losses the app can actually control. It cannot raise the DAC output rate: the system mixer rate is fixed by the platform, and the badge on the player screen shows what really happened.</string>
     <string name="setcat_cvby_audio_offload_title">DSP on-demand (hardware offload)</string>
     <string name="setcat_cvby_audio_offload_subtitle">On by default. Hands the decoded track to the audio HAL through COMPRESS_OFFLOAD, so the DSP does the mixing instead of the CPU. Turn it off only if playback stutters or the offload HAL misbehaves.</string>
     <string name="setcat_network_enabled_title">Online features</string>

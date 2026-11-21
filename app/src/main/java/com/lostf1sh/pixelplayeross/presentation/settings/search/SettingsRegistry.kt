@@ -570,6 +570,18 @@ object SettingsRegistry {
                 onToggle = { viewModel, checked -> viewModel.setAudioOffloadEnabled(checked) }
             ),
             SettingSpec(
+                id = "cvby_audio_high_quality",
+                itemKey = "item_cvby_audio_high_quality",
+                titleRes = R.string.setcat_cvby_high_quality_title,
+                subtitleRes = R.string.setcat_cvby_high_quality_subtitle,
+                category = SettingsCategory.CVBY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("cvby"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("high quality", "hifi", "hires", "float", "pcm", "antialias", "高音质", "音质"),
+                getValue = { it.audioHighQualityMode },
+                onToggle = { viewModel, checked -> viewModel.setAudioHighQualityModeEnabled(checked) }
+            ),
+            SettingSpec(
                 id = "cvby_audio_hires_cap",
                 itemKey = "item_cvby_audio_hires_cap",
                 titleRes = R.string.setcat_audio_hires_cap_title,
