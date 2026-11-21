@@ -486,6 +486,18 @@
 
     <string name="presentation_batch_g_changelog_sec_whats_new">新增功能</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">此前个人版已包含</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v080_whats_new">
+        <item>同步上游 101 个提交，原版功能不再落后于你的自定义功能。</item>
+        <item>新增实验性「bit-perfect USB 输出」模式；均衡器改为音频链路上的软件 DSP：保存的预设开播自动套用，采样率变化时自动跟到新增益。</item>
+        <item>蓝牙切歌更稳，session IPC 移出主线程。DSP 按需挂载开关仍与 Hi-Res 上限、环绕下混双向互斥。</item>
+        <item>曲库改为单事务读取，清空队列改用区间删除，移除 shuffle 的 60 首上限。</item>
+        <item>首页新增「最近添加」板块，长按菜单或右滑即可加入队列；每日 Mix 逐天轮换。</item>
+        <item>Jellyfin 收藏双向同步；云曲库可整库入队并导出离线副本（支持断点续传）；Jellyfin/Navidrome 封面按所需尺寸请求。</item>
+        <item>折叠屏双栏布局、横屏播放适配、胶囊形迷你播放器，导航栏现在绘制在播放器面板之上。</item>
+        <item>新增「系统字体」开关与「界面缩放」。第三方键盘收起后，元数据编辑页不再留白。</item>
+        <item>新增巴西葡语、捷克语、斯洛伐克语、越南语翻译。</item>
+        <item>你的定制全部保留：cvby 自定义页、自定义背景、图标选择、开屏动画开关、点击封面开歌词、音乐库背景色、播控按键样式。</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v070_whats_new">
         <item>播放页新增音质徽章，实时显示实际输出的采样率、位深，以及 Direct / Mixer 通路。</item>
         <item>徽章不再把 DAC 的最高档位当成输出采样率。之前放 96 kHz 的歌会显示「→ 384 kHz」，看着像升频，其实输出一直是源采样率。</item>

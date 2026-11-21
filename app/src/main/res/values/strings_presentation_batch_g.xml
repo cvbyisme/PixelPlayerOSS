@@ -488,6 +488,18 @@ Backslash (\) can be used to escape character delimiters.</string>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">What\'s new</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">Carried over from earlier personal builds</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v080_whats_new">
+        <item>Merged 101 upstream commits, so the stock feature set now lives next to the fork-only options instead of trailing behind them.</item>
+        <item>New experimental bit-perfect USB output mode, and the equalizer is now a software DSP inside the audio sink: saved presets apply automatically and the gains follow sample rate changes.</item>
+        <item>Bluetooth track transitions are stable and session IPC moved off the main thread. The DSP on-demand switch still gates the Hi-Res cap and the surround downmix in both directions.</item>
+        <item>The song library is read in a single transaction, clearing the queue uses range removals, and the 60-track shuffle cap is gone.</item>
+        <item>Home has a Recently added section; songs can be queued from its long-press menu or by swiping, and the Daily Mix rotates day to day.</item>
+        <item>Jellyfin favourites sync both ways, cloud libraries can be queued and exported offline with resume, and Jellyfin/Navidrome covers are requested at the right size.</item>
+        <item>Foldable two-pane layout, landscape playback, a pill-shaped mini-player, and the navigation bar now draws above the player sheet.</item>
+        <item>New system font switch and interface scale. Metadata editors no longer leave blank space when a third-party keyboard closes.</item>
+        <item>Added Brazilian Portuguese, Czech, Slovak and Vietnamese translations.</item>
+        <item>Your fork options are all still here: cvby tweaks page, custom background, icon picker, launch animation switch, cover-tap lyrics, library background colour and transport button styles.</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v070_whats_new">
         <item>New audio quality badge shows what is actually being output: sample rate, bit depth and the Direct/Mixer path.</item>
         <item>The badge no longer reports a DAC\'s maximum rate as the output rate. With a 96 kHz track it used to read \"→ 384 kHz\", which looked like upsampling even though playback always ran at the source rate.</item>
