@@ -19,12 +19,24 @@ object HiFiCapabilityChecker {
 
     @Volatile private var cachedResult: Boolean? = null
 
+    /**
+     * cvby: synchronized so two callers racing on first use cannot each build an AudioTrack.
+     * The check allocates and releases a real track, so duplicate work is not just wasteful
+     * but briefly opens two output streams at once.
+     */
+    @Synchronized
     fun isSupported(): Boolean {
         cachedResult?.let { return it }
         return runCheck().also {
             cachedResult = it
             Timber.tag("HiFiCapability").i("PCM_FLOAT AudioTrack supported: $it")
         }
+    }
+
+    /** Forgets the cached answer; called when the output device set changes. */
+    @Synchronized
+    fun invalidate() {
+        cachedResult = null
     }
 
     private fun runCheck(): Boolean {
@@ -56,8 +68,13 @@ object HiFiCapabilityChecker {
                 .setBufferSizeInBytes(minBuf)
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
-            val initialized = track.state == AudioTrack.STATE_INITIALIZED
-            track.release()
+            // release() must run even if reading state throws, otherwise the track leaks
+            // its output stream and later probes can fail for unrelated reasons.
+            val initialized = try {
+                track.state == AudioTrack.STATE_INITIALIZED
+            } finally {
+                runCatching { track.release() }
+            }
             if (!initialized) Timber.tag("HiFiCapability").w("AudioTrack created but state != INITIALIZED")
             initialized
         } catch (e: Exception) {

@@ -104,7 +104,6 @@ import com.lostf1sh.pixelplayeross.utils.formatSongCount
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import com.lostf1sh.pixelplayeross.ui.theme.LocalShowScrollbar
 import kotlinx.coroutines.flow.distinctUntilChanged
-import androidx.compose.foundation.combinedClickable
 import kotlinx.coroutines.flow.map
 import kotlinx.collections.immutable.ImmutableList
 import kotlinx.collections.immutable.toImmutableList

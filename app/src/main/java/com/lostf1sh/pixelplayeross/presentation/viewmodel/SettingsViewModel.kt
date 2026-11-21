@@ -821,10 +821,26 @@ class SettingsViewModel @Inject constructor(
             val savedPath = withContext(Dispatchers.IO) {
                 runCatching {
                     val directory = File(context.filesDir, AppBackgroundConfig.DIR_NAME).apply { mkdirs() }
-                    directory.listFiles()?.forEach { stale -> stale.delete() }
+                    // Keep the old image until the new one is safely on disk. The picker URI can
+                    // stop resolving (permission revoked, file deleted); deleting the old image
+                    // first would leave the user with no background and a dangling path.
+                    val staging = File(directory, "background.new")
+                    val wrote = context.contentResolver.openInputStream(uri)?.use { input ->
+                        staging.outputStream().use { output -> input.copyTo(output) }
+                        true
+                    } ?: false
+                    if (wrote == false || staging.length() <= 0L) {
+                        staging.delete()
+                        return@runCatching null
+                    }
                     val target = File(directory, "background.jpg")
-                    context.contentResolver.openInputStream(uri)?.use { input ->
-                        target.outputStream().use { output -> input.copyTo(output) }
+                    directory.listFiles()?.forEach { stale ->
+                        if (stale.name != staging.name) stale.delete()
+                    }
+                    val renamed = staging.renameTo(target)
+                    if (renamed == false) {
+                        staging.copyTo(target, overwrite = true)
+                        staging.delete()
                     }
                     target.takeIf { it.length() > 0L }?.absolutePath
                 }.getOrNull()

@@ -49,7 +49,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalResources
@@ -60,7 +59,6 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.dp
 import androidx.media3.common.util.UnstableApi
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -868,6 +866,12 @@ private fun PlayerSheetBackdrop(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    // Bound the decode to the screen, not the source art: this is a heavily blurred
+    // backdrop, so full-resolution pixels cost heap and GPU time for detail the blur drops.
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val targetWidth = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    val targetHeight = with(density) { configuration.screenHeightDp.dp.roundToPx() }
     Box(modifier = modifier) {
         if (blurCover && !albumArtUri.isNullOrBlank()) {
             val imageModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -878,6 +882,7 @@ private fun PlayerSheetBackdrop(
             AsyncImage(
                 model = ImageRequest.Builder(context)
                     .data(albumArtUri)
+                    .size(targetWidth.coerceAtLeast(1), targetHeight.coerceAtLeast(1))
                     .crossfade(true)
                     .build(),
                 contentDescription = null,

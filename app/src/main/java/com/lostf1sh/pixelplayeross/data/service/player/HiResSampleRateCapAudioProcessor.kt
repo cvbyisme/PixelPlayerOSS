@@ -272,8 +272,52 @@ class HiResSampleRateCapAudioProcessor(
     override fun isEnded(): Boolean = inputEnded && pendingSize == 0 && outputBuffer === AudioProcessor.EMPTY_BUFFER
 
     override fun queueEndOfStream() {
+        // Emit whatever tail is still buffered instead of dropping it. A leftover group is the
+        // last few milliseconds of the track; discarding it clipped the end of every song that
+        // happened to end mid-group. Any trailing bytes that do not form a whole frame are
+        // still dropped, since they cannot be decoded as audio.
+        emitPendingTail()
         pendingSize = 0
         inputEnded = true
+    }
+
+    /** Runs the remaining buffered frames through the filter and emits one output frame each. */
+    private fun emitPendingTail() {
+        if (!isActive() || pendingSize <= 0) return
+        val sampleBytes = if (inputFormat.encoding == C.ENCODING_PCM_FLOAT) Float.SIZE_BYTES else Short.SIZE_BYTES
+        val bytesPerFrame = inputFormat.channelCount * sampleBytes
+        val wholeFrames = pendingSize / bytesPerFrame
+        if (wholeFrames == 0) return
+
+        outputBuffer = ensureOutputBuffer(wholeFrames * bytesPerFrame)
+        var offset = 0
+        repeat(wholeFrames) {
+            for (ch in 0 until inputFormat.channelCount) {
+                val x = if (inputFormat.encoding == C.ENCODING_PCM_FLOAT) {
+                    val v = readFloatFromPending(offset)
+                    offset += Float.SIZE_BYTES
+                    v
+                } else {
+                    val v = readShortFromPending(offset).toFloat()
+                    offset += Short.SIZE_BYTES
+                    v
+                }
+                val previous = lowpassState[ch]
+                lowpassState[ch] = previous + lowpassCoefficient * (x - previous)
+            }
+            for (ch in 0 until inputFormat.channelCount) {
+                if (inputFormat.encoding == C.ENCODING_PCM_FLOAT) {
+                    outputBuffer.putFloat(lowpassState[ch].coerceIn(-1f, 1f))
+                } else {
+                    val sample = lowpassState[ch].coerceIn(
+                        Short.MIN_VALUE.toFloat(),
+                        Short.MAX_VALUE.toFloat()
+                    )
+                    outputBuffer.putShort(sample.toInt().toShort())
+                }
+            }
+        }
+        outputBuffer.flip()
     }
 
     @Deprecated("Media3 AudioProcessor now prefers flush(StreamMetadata); kept for interface compatibility")

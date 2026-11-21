@@ -533,6 +533,39 @@ class DualPlayerEngine @Inject constructor(
     private var sharedAudioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
 
     private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    /**
+     * cvby: the output Path probe caches per sample rate, so a headset swap (USB in/out, the
+     * classic 48 kHz mixer fallback becoming available again) would otherwise keep reporting the
+     * previous device forever. Dropping the cache on every device change keeps the badge honest.
+     */
+    private val audioDeviceCallback = object : android.media.AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(addedDevices: Array<android.media.AudioDeviceInfo>) {
+            onOutputDeviceChanged()
+        }
+        override fun onAudioDevicesRemoved(removedDevices: Array<android.media.AudioDeviceInfo>) {
+            onOutputDeviceChanged()
+        }
+    }
+
+    /** Drops the cached probe result and re-measures so the badge stops showing the old device. */
+    private fun onOutputDeviceChanged() {
+        DirectOutputProbe.invalidate()
+        HiFiCapabilityChecker.invalidate()
+        val current = _audioFormatSnapshot.value ?: return
+        // Clear the stale measurement immediately; publishProbedOutput fills in the new one.
+        _audioFormatSnapshot.value = current.copy(
+            probedOutputRate = 0,
+            probeAcceptedSourceRate = false
+        )
+        publishProbedOutput(current)
+    }
+    private var audioDeviceCallbackRegistered = false
+    init {
+        runCatching {
+            audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
+            audioDeviceCallbackRegistered = true
+        }.onFailure { Timber.w(it, "Unable to watch audio device changes") }
+    }
     private var audioFocusRequest: AudioFocusRequest? = null
     private var isFocusLossPause = false
     private var lastPlayWhenReadyAtMs: Long = 0L
@@ -1973,6 +2006,10 @@ class DualPlayerEngine @Inject constructor(
         preResolutionJob?.cancel()
         cancelAudioOffloadFallback()
         scope.coroutineContext[Job]?.cancel()
+        if (audioDeviceCallbackRegistered) {
+            runCatching { audioManager.unregisterAudioDeviceCallback(audioDeviceCallback) }
+            audioDeviceCallbackRegistered = false
+        }
         abandonAudioFocus()
         if (::playerA.isInitialized) {
             removeMasterPlayerListeners(playerA)

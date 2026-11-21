@@ -10,7 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -39,6 +41,13 @@ fun AppBackgroundLayer(
     if (!config.isActive) return
     val path = config.imagePath ?: return
     val context = LocalContext.current
+    // Decode at the size we actually paint. Coil otherwise decodes the full-resolution picker
+    // image, which for a 4000x3000 photo is ~48 MB of heap spent on pixels that are then
+    // scaled to a phone screen -- enough to OOM low-RAM devices.
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val targetWidth = with(density) { configuration.screenWidthDp.dp.roundToPx() }
+    val targetHeight = with(density) { configuration.screenHeightDp.dp.roundToPx() }
     Box(modifier = modifier) {
         val imageModifier = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             Modifier
@@ -51,6 +60,7 @@ fun AppBackgroundLayer(
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(File(path))
+                .size(targetWidth.coerceAtLeast(1), targetHeight.coerceAtLeast(1))
                 .crossfade(true)
                 .build(),
             contentDescription = null,
