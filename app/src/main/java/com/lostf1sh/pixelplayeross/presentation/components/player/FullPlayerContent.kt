@@ -2167,6 +2167,25 @@ private fun PlayerSongInfo(
             ),
             canScroll = isPlayingProvider()
         )
+
+        // cvby: live transport-quality line. Reads the engine's format flow directly so it
+        // updates the instant the decoder reports a new track, with no extra polling.
+        val liveAudioFormat by playerViewModel.audioFormatSnapshot.collectAsStateWithLifecycle()
+        val liveDecoder by playerViewModel.activeAudioDecoder.collectAsStateWithLifecycle()
+        val isOffloadActive = playerViewModel.isAudioOffloadActive
+        if (liveAudioFormat != null) {
+            Spacer(modifier = Modifier.height(6.dp))
+            AudioQualityBadge(
+                snapshot = liveAudioFormat,
+                decoder = liveDecoder,
+                isOffloadActive = isOffloadActive,
+                textColor = artistTextColor,
+                modifier = Modifier.graphicsLayer {
+                    val fraction = expansionFractionProvider()
+                    alpha = fraction
+                }
+            )
+        }
     }
 }
 

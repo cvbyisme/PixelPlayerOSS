@@ -64,6 +64,7 @@ import com.lostf1sh.pixelplayeross.data.repository.LyricsSearchResult
 import com.lostf1sh.pixelplayeross.data.repository.MusicRepository
 import com.lostf1sh.pixelplayeross.data.service.MusicNotificationProvider
 import com.lostf1sh.pixelplayeross.data.service.MusicService
+import com.lostf1sh.pixelplayeross.data.service.player.ActiveDecoderInfo
 import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
 import com.lostf1sh.pixelplayeross.di.DispatcherProvider
@@ -315,6 +316,27 @@ class PlayerViewModel @Inject constructor(
         )
 
     val stablePlayerState: StateFlow<StablePlayerState> = playbackStateHolder.stablePlayerState
+
+    /**
+     * cvby: live codec/transport info for the now-playing badge.
+     *
+     * Shows what is genuinely being decoded right now (container codec, source sample rate,
+     * bit depth when derivable, bitrate, channel count) plus how it leaves the app: either as
+     * a bitstream handed to the HAL (offload) or as PCM through the system mixer.
+     *
+     * A regular app cannot read the DAC's real clock, so this deliberately makes no claim
+     * about hardware output rate -- only about the source format and the transport path.
+     */
+    val audioFormatSnapshot: StateFlow<DualPlayerEngine.AudioFormatSnapshot?> =
+        dualPlayerEngine.audioFormatSnapshot
+
+    /** Name/hardware-acceleration of the audio decoder currently in use, for the badge. */
+    val activeAudioDecoder: StateFlow<ActiveDecoderInfo?> = dualPlayerEngine.activeDecoderInfo
+
+    /** True while the current track is handed to the HAL as a bitstream (offload). */
+    val isAudioOffloadActive: Boolean
+        get() = dualPlayerEngine.isAudioOffloadEnabled
+
     val albumArtPaletteStyle: StateFlow<AlbumArtPaletteStyle> = themePreferencesRepository
         .albumArtPaletteStyleFlow
         .stateIn(

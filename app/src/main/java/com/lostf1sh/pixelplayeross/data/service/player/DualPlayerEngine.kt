@@ -13,6 +13,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes as Media3AudioAttributes
 import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.C
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackParameters
@@ -249,6 +250,17 @@ class DualPlayerEngine @Inject constructor(
         private val LOCAL_MEDIA_SCHEMES = setOf("content", "file", "android.resource")
         private val REMOTE_MEDIA_SCHEMES = setOf("http", "https", "navidrome", "jellyfin")
         private val CLOUD_PROXY_SCHEMES = setOf("navidrome", "jellyfin")
+        /**
+         * cvby: MIME types that already carry uncompressed PCM. Used to tell a decoded PCM
+         * track apart from a bitstream (offload) one when building the quality badge.
+         */
+        private val PCM_MIME_TYPES = setOf(
+            MimeTypes.AUDIO_RAW,
+            MimeTypes.AUDIO_WAV,
+            // Media3 has no AUDIO_AIFF constant; the AIFF extractor reports this literal.
+            "audio/x-aiff",
+            "audio/aiff"
+        )
     }
 
     data class TransitionTarget(
@@ -279,6 +291,7 @@ class DualPlayerEngine @Inject constructor(
         if (hiResSampleRateCapEnabled) add(HiResSampleRateCapAudioProcessor())
         if (surroundDownmixEnabled) add(SurroundDownmixProcessor())
     }
+
     /** Rebuilds the sink only when an option actually changed; a no-op otherwise. */
     fun setAudioDspOptions(hiResCap: Boolean, surroundDownmix: Boolean) {
         if (hiResSampleRateCapEnabled == hiResCap && surroundDownmixEnabled == surroundDownmix) return
@@ -378,34 +391,144 @@ class DualPlayerEngine @Inject constructor(
      */
     val isAudioOffloadEnabled: Boolean
         get() = audioOffloadEnabledForCurrentMode
-
     /** Lightweight, allocation-cheap snapshot of the live audio format, for diagnostics. */
     data class AudioFormatSnapshot(
         val sampleMimeType: String?,
         val sampleRate: Int,
         val channelCount: Int,
         val pcmEncoding: Int,
-        val bitrate: Int
-    )
+        val bitrate: Int,
+        /**
+         * Platform mixer baseline, from [AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE].
+         *
+         * IMPORTANT: this is the rate the *mixer* runs at, not the DAC's clock. A plain app
+         * cannot read the real HAL rate (that needs DUMP/root). It is therefore only used to
+         * explain that a non-offload track of a different rate goes through the mixer.
+         */
+        val mixerSampleRate: Int = 0,
+        /** True when the sink is feeding a bitstream (offload/direct) instead of PCM. */
+        val isBitstream: Boolean = false,
+        /**
+         * Result of a real AudioTrack probe at the source sample rate, when one was run.
+         *
+         * This is measured, not inferred: an AudioTrack created at 96 kHz that comes back with
+         * `sampleRate == 96000` means the platform did not insert a resampler for that request.
+         * It still does not reveal the DAC clock (a plain app cannot read it), so it is
+         * reported as "accepted at N Hz", never as "DAC running at N Hz".
+         */
+        val probedOutputRate: Int = 0,
+        val probeAcceptedSourceRate: Boolean = false
+    ) {
+        /**
+         * True when this track is not reaching the output at its native rate.
+         *
+         * Preference order: the measured AudioTrack result when available, otherwise the
+         * source-vs-mixer comparison. Offload tracks bypass the mixer, so they are never
+         * reported as resampled.
+         */
+        val isResampled: Boolean
+            get() = when {
+                isBitstream -> false
+                probedOutputRate > 0 -> !probeAcceptedSourceRate
+                else -> mixerSampleRate > 0 && sampleRate > 0 && mixerSampleRate != sampleRate
+            }
+
+        /** Bit depth of the source, when it can be derived without root. Null when unknown. */
+        val sourceBitDepth: Int?
+            get() = when (pcmEncoding) {
+                C.ENCODING_PCM_8BIT -> 8
+                C.ENCODING_PCM_16BIT -> 16
+                // Media3's C.ENCODING_PCM_24BIT is AudioFormat.ENCODING_PCM_24BIT_PACKED.
+                C.ENCODING_PCM_24BIT -> 24
+                C.ENCODING_PCM_32BIT -> 32
+                C.ENCODING_PCM_FLOAT -> 32
+                else -> null
+            }
+    }
+
+    private val _audioFormatSnapshot = MutableStateFlow<AudioFormatSnapshot?>(null)
+
+    /**
+     * cvby: live audio format for the now-playing quality badge.
+     *
+     * Published from `onAudioInputFormatChanged`, so it flips the moment the decoder reports a
+     * new track instead of being polled. Cleared when playback goes idle.
+     */
+    val audioFormatSnapshot: StateFlow<AudioFormatSnapshot?> = _audioFormatSnapshot.asStateFlow()
+
+    /** Drops the badge data once nothing is decoding, so a stale codec is never shown. */
+    private fun clearAudioFormatSnapshot() {
+        _audioFormatSnapshot.value = null
+    }
 
     /** Returns the current master-player audio format, or null when nothing is decoding. */
     fun currentAudioFormatSnapshot(): AudioFormatSnapshot? {
         if (!::playerA.isInitialized) return null
         val format = playerA.audioFormat ?: return null
+        return buildAudioFormatSnapshot(format)
+    }
+
+    /**
+     * Builds a snapshot from an explicit [Format].
+     *
+     * Used instead of re-reading [playerA.audioFormat] from the analytics callback, because the
+     * callback fires before the player has necessarily published the new format.
+     */
+    private fun buildAudioFormatSnapshot(format: Format): AudioFormatSnapshot {
         fun Int.orZero() = if (this == Format.NO_VALUE) 0 else this
         val bitrate = when {
             format.averageBitrate != Format.NO_VALUE -> format.averageBitrate
             format.peakBitrate != Format.NO_VALUE -> format.peakBitrate
             else -> 0
         }
+        // cvby: mixer baseline only. A plain app cannot read the real HAL/DAC clock (that
+        // requires DUMP or root), so this is used purely to flag "goes through the mixer",
+        // never to claim the DAC is running at this rate.
+        val mixerRate = audioManager
+            .getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE)
+            ?.toIntOrNull()
+            ?.takeIf { it > 0 }
+            ?: 0
+        // A bitstream track (MP3/AAC/Opus handed straight to the HAL) has no PCM encoding.
+        // Those bypass the mixer, so the mixer rate is irrelevant for them.
+        val isBitstream = format.pcmEncoding == Format.NO_VALUE &&
+            format.sampleMimeType != null &&
+            format.sampleMimeType !in PCM_MIME_TYPES
+        val sourceRate = format.sampleRate.orZero()
         return AudioFormatSnapshot(
             sampleMimeType = format.sampleMimeType,
-            sampleRate = format.sampleRate.orZero(),
+            sampleRate = sourceRate,
             channelCount = format.channelCount.orZero(),
             pcmEncoding = format.pcmEncoding.orZero(),
-            bitrate = bitrate
+            bitrate = bitrate,
+            mixerSampleRate = mixerRate,
+            isBitstream = isBitstream
         )
     }
+
+    /**
+     * cvby: fills in [AudioFormatSnapshot.probedOutputRate] off the main thread.
+     *
+     * Building an AudioTrack takes a few milliseconds and must never run inside the player's
+     * format-change callback, so the badge first appears with the decoded format and is then
+     * upgraded with the measured result.
+     */
+    private fun publishProbedOutput(base: AudioFormatSnapshot) {
+        if (base.isBitstream || base.sampleRate <= 0) return
+        scope.launch(Dispatchers.IO) {
+            val probe = DirectOutputProbe.probe(context, base.sampleRate)
+            val current = _audioFormatSnapshot.value ?: return@launch
+            // Drop the result if the track changed while we were probing.
+            if (current.sampleRate != base.sampleRate || current.sampleMimeType != base.sampleMimeType) {
+                return@launch
+            }
+            _audioFormatSnapshot.value = current.copy(
+                probedOutputRate = probe.actualSampleRate,
+                probeAcceptedSourceRate = probe.directGranted
+            )
+        }
+    }
+
 
     private var sharedAudioSessionId: Int = C.AUDIO_SESSION_ID_UNSET
 
@@ -520,6 +643,34 @@ class DualPlayerEngine @Inject constructor(
             Timber.tag("DualPlayerEngine").d("Audio decoder initialized: %s (Hardware: %b)", decoderName, isHardware)
         }
 
+        /**
+         * cvby: source format of the track currently being decoded. This is the moment the
+         * real sample rate / encoding becomes known, so the now-playing quality badge is
+         * published here rather than on a timer.
+         */
+        @Suppress("UnsafeOptInUsageError")
+        override fun onAudioInputFormatChanged(
+            eventTime: AnalyticsListener.EventTime,
+            format: Format,
+            decoderReuseEvaluation: androidx.media3.exoplayer.DecoderReuseEvaluation?
+        ) {
+            // Publish from the callback's own Format: at this instant playerA.audioFormat may
+            // still hold the previous track's format.
+            val snapshot = buildAudioFormatSnapshot(format)
+            _audioFormatSnapshot.value = snapshot
+            // Measured output path is filled in asynchronously so the callback stays cheap.
+            publishProbedOutput(snapshot)
+        }
+
+        override fun onAudioUnderrun(
+            eventTime: AnalyticsListener.EventTime,
+            bufferSize: Int,
+            bufferSizeMs: Long,
+            elapsedSinceLastFeedMs: Long
+        ) {
+            // A new underrun run does not change the format; nothing to publish here.
+        }
+
         override fun onAudioSessionIdChanged(audioSessionId: Int) {
             if (audioSessionId != 0 && _activeAudioSessionId.value != audioSessionId) {
                 _activeAudioSessionId.value = audioSessionId
@@ -603,7 +754,11 @@ class DualPlayerEngine @Inject constructor(
                     }
                 }
                 Player.STATE_READY -> scheduleAudioOffloadFallbackIfNeeded(playerA)
-                Player.STATE_IDLE, Player.STATE_ENDED -> cancelAudioOffloadFallback()
+                Player.STATE_IDLE, Player.STATE_ENDED -> {
+                    cancelAudioOffloadFallback()
+                    // cvby: nothing is decoding any more, so drop the badge data.
+                    if (playbackState == Player.STATE_IDLE) clearAudioFormatSnapshot()
+                }
             }
         }
 
@@ -1098,16 +1253,26 @@ class DualPlayerEngine @Inject constructor(
                 enableAudioOutputPlaybackParams: Boolean
             ): AudioSink {
                 if (outputMode.usesUnmodifiedMedia3AudioSink) {
-                    // Android's audio policy may
-                    // grant a DIRECT thread for a compatible device/format, or safely fall back
-                    // to the mixed path. This deliberately does not promise exclusive output.
-                    return requireNotNull(
-                        super.buildAudioSink(
-                            context,
-                            false,
-                            enableAudioOutputPlaybackParams
-                        )
-                    ) { "Media3 did not create its default AudioSink" }
+                    // cvby: DIRECT mode is a stock Media3 sink on purpose.
+                    //
+                    // Media3's own buildAudioSink() is exactly the builder below, so this is not
+                    // a behaviour change -- it is spelled out because two tempting "fixes" do
+                    // not work and must not be re-added:
+                    //
+                    //  * DefaultAudioSink.Builder.setAudioCapabilities(...) is silently ignored
+                    //    whenever a Context is passed (Media3 passes null internally in that
+                    //    case), so we cannot force a sample rate through it.
+                    //  * AudioCapabilities has no public Builder, so the values cannot be
+                    //    constructed in the first place.
+                    //
+                    // Whether a track gets a direct thread is decided by the platform audio
+                    // policy given the device's descriptors, which a plain app cannot override.
+                    // DirectOutputProbe measures what the platform actually granted.
+                    return super.buildAudioSink(
+                        context,
+                        false,
+                        enableAudioOutputPlaybackParams
+                    )
                 }
                 val audioProcessors = buildAudioProcessors()
                 if (audioProcessors.isEmpty()) {
