@@ -25,8 +25,12 @@ concurrency:
 
 jobs:
   build-and-release:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-
+    # Pinned to GitHub's hosted runner: the Blacksmith pool was not handing out
+    # machines, so dispatched runs sat in "queued" with runner_id 0 for 30+ min.
+    # Nothing in this workflow uses a Blacksmith-specific feature, so swapping
+    # back is a one-line change:
+    #   runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
