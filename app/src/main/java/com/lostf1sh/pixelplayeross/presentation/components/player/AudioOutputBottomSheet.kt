@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Hearing
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.Speaker
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Usb
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Card
@@ -56,12 +57,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lostf1sh.pixelplayeross.data.service.player.ActiveDecoderInfo
+import com.lostf1sh.pixelplayeross.data.service.player.DualPlayerEngine
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lostf1sh.pixelplayeross.R
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.AudioOutputDevice
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.AudioOutputKind
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.AudioOutputViewModel
+import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.RoundedSans
 import timber.log.Timber
 
@@ -71,10 +75,16 @@ import timber.log.Timber
 internal fun AudioOutputBottomSheet(
     sheetState: SheetState,
     onDismiss: () -> Unit,
+    playerViewModel: PlayerViewModel,
     viewModel: AudioOutputViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val outputs by viewModel.outputs.collectAsStateWithLifecycle()
+    // cvby: the transport-quality readout lives here now, next to the device list it describes,
+    // instead of crowding the now-playing screen. It is the same flow the engine publishes.
+    val liveAudioFormat by playerViewModel.audioFormatSnapshot.collectAsStateWithLifecycle()
+    val liveDecoder by playerViewModel.activeAudioDecoder.collectAsStateWithLifecycle()
+    val isOffloadActive = playerViewModel.isAudioOffloadActive
 
     DisposableEffect(viewModel) {
         viewModel.setPickerActive(true)
@@ -113,6 +123,14 @@ internal fun AudioOutputBottomSheet(
                 outputs = outputs,
                 onSelectOutput = viewModel::selectOutput
             )
+
+            if (liveAudioFormat != null) {
+                AudioQualitySection(
+                    snapshot = liveAudioFormat,
+                    decoder = liveDecoder,
+                    isOffloadActive = isOffloadActive,
+                )
+            }
 
             MoreDevicesRow(onClick = { openSystemOutputSwitcher(context) })
 
@@ -251,5 +269,69 @@ private fun AudioOutputKind.icon(): ImageVector = when (this) {
     AudioOutputKind.Usb -> Icons.Rounded.Usb
     AudioOutputKind.Bluetooth -> Icons.Rounded.Bluetooth
     AudioOutputKind.HearingAid -> Icons.Rounded.Hearing
-    AudioOutputKind.Other -> Icons.Rounded.Speaker
+        AudioOutputKind.Other -> Icons.Rounded.Speaker
+}
+
+/**
+ * cvby: live transport-quality readout, moved here from the now-playing screen.
+ *
+ * Shows exactly what the engine reports for the track that is decoding right now: codec,
+ * source rate, bit depth, bitrate, channel count, the output path, and the decoder in use.
+ * It deliberately never claims a DAC rate -- reading that needs DUMP/root.
+ */
+@Composable
+private fun AudioQualitySection(
+    snapshot: DualPlayerEngine.AudioFormatSnapshot,
+    decoder: ActiveDecoderInfo?,
+    isOffloadActive: Boolean,
+) {
+    val colors = MaterialTheme.colorScheme
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainer),
+        shape = RoundedCornerShape(24.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(colors.tertiaryContainer, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.GraphicEq,
+                        contentDescription = null,
+                        tint = colors.onTertiaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.player_audio_quality_title),
+                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
+                    )
+                    Text(
+                        text = stringResource(R.string.player_audio_quality_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = colors.onSurfaceVariant
+                    )
+                }
+            }
+            AudioQualityBadge(
+                snapshot = snapshot,
+                decoder = decoder,
+                isOffloadActive = isOffloadActive,
+                textColor = colors.onSurface
+            )
+        }
+    }
 }

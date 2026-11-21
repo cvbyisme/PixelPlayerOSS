@@ -86,6 +86,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -251,6 +255,8 @@ fun FullPlayerContent(
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
     var showSaveBookmarkDialog by rememberSaveable { mutableStateOf(false) }
     var showAudioOutputSheet by rememberSaveable { mutableStateOf(false) }
+    // cvby: tapping the volume readout opens a step-accurate volume panel.
+    var showVolumePanel by rememberSaveable { mutableStateOf(false) }
     val bookmarksViewModel: AudioBookmarksViewModel = hiltViewModel()
     
     val lyricsSearchUiState by playerViewModel.lyricsSearchUiState.collectAsStateWithLifecycle()
@@ -808,7 +814,8 @@ fun FullPlayerContent(
                             val bluetoothOutputName = bluetoothName?.takeIf { isBluetoothEnabled }
                             PlayerVolumeLabel(
                                 accentColor = playerAccentColor,
-                                containerColor = playerOnAccentColor.copy(alpha = 0.7f)
+                                containerColor = playerOnAccentColor.copy(alpha = 0.7f),
+                                onClick = { showVolumePanel = true }
                             )
                             Box(
                                 modifier = Modifier
@@ -960,10 +967,18 @@ fun FullPlayerContent(
         )
     }
 
+    if (showVolumePanel) {
+        VolumePanelBottomSheet(
+            sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
+            onDismiss = { showVolumePanel = false }
+        )
+    }
+
     if (showAudioOutputSheet) {
         AudioOutputBottomSheet(
             sheetState = rememberModalSheetState(skipPartiallyExpanded = true),
-            onDismiss = { showAudioOutputSheet = false }
+            onDismiss = { showAudioOutputSheet = false },
+            playerViewModel = playerViewModel
         )
     }
 }
@@ -2168,24 +2183,8 @@ private fun PlayerSongInfo(
             canScroll = isPlayingProvider()
         )
 
-        // cvby: live transport-quality line. Reads the engine's format flow directly so it
-        // updates the instant the decoder reports a new track, with no extra polling.
-        val liveAudioFormat by playerViewModel.audioFormatSnapshot.collectAsStateWithLifecycle()
-        val liveDecoder by playerViewModel.activeAudioDecoder.collectAsStateWithLifecycle()
-        val isOffloadActive = playerViewModel.isAudioOffloadActive
-        if (liveAudioFormat != null) {
-            Spacer(modifier = Modifier.height(6.dp))
-            AudioQualityBadge(
-                snapshot = liveAudioFormat,
-                decoder = liveDecoder,
-                isOffloadActive = isOffloadActive,
-                textColor = artistTextColor,
-                modifier = Modifier.graphicsLayer {
-                    val fraction = expansionFractionProvider()
-                    alpha = fraction
-                }
-            )
-        }
+        // cvby: the live transport-quality readout moved to the audio output sheet, where it
+        // sits next to the device picker it describes. The now-playing screen stays uncluttered.
     }
 }
 
@@ -2661,7 +2660,8 @@ private fun readMusicVolumePercent(audioManager: AudioManager?): Int {
 private fun PlayerVolumeLabel(
     accentColor: Color,
     containerColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val audioManager = remember(context) {
@@ -2687,11 +2687,25 @@ private fun PlayerVolumeLabel(
         onDispose { runCatching { context.unregisterReceiver(receiver) } }
     }
 
+    val volumePanelDescription = stringResource(R.string.player_volume_panel_title)
     Box(
         modifier = modifier
             .height(42.dp)
             .clip(CircleShape)
             .background(containerColor)
+            // cvby: the readout doubles as the entry point to the step-accurate volume panel.
+            .then(
+                if (onClick != null) {
+                    Modifier
+                        .clickable(onClick = onClick)
+                        .semantics {
+                            role = Role.Button
+                            contentDescription = volumePanelDescription
+                        }
+                } else {
+                    Modifier
+                }
+            )
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center
     ) {

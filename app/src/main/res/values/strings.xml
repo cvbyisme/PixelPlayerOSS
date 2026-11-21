@@ -288,4 +288,12 @@
     <string name="musicbrainz_match_score">Match confidence: %1$d%%</string>
     <string name="musicbrainz_applied">MusicBrainz identifiers saved. Missing year and placeholder names were enriched.</string>
 
+    <string name="player_audio_quality_title">Audio output quality</string>
+    <string name="player_audio_quality_subtitle">Measured from the track playing right now</string>
+    <string name="player_volume_panel_title">Volume</string>
+    <string name="player_volume_panel_steps">Step %1$d / %2$d</string>
+    <string name="player_volume_panel_mute">Mute</string>
+    <string name="player_volume_panel_step_down">One step down</string>
+    <string name="player_volume_panel_step_up">One step up</string>
+    <string name="player_volume_panel_hint">Drag for a coarse change, or use the arrows to move one hardware step at a time.</string>
 </resources>

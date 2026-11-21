@@ -284,4 +284,12 @@
     <string name="musicbrainz_match_score">匹配度：%1$d%%</string>
     <string name="musicbrainz_applied">已保存 MusicBrainz 标识符，并补全了缺失的年份和占位名称。</string>
     <string name="cloud_playlist_download">下载歌单</string>
+    <string name="player_audio_quality_title">音频输出质量</string>
+    <string name="player_audio_quality_subtitle">依据当前正在播放的音轨实测</string>
+    <string name="player_volume_panel_title">音量</string>
+    <string name="player_volume_panel_steps">第 %1$d / %2$d 档</string>
+    <string name="player_volume_panel_mute">静音</string>
+    <string name="player_volume_panel_step_down">降低一档</string>
+    <string name="player_volume_panel_step_up">提高一档</string>
+    <string name="player_volume_panel_hint">拖动可快速调整，或用箭头逐档微调，每次只动一个硬件级别。</string>
 </resources>
