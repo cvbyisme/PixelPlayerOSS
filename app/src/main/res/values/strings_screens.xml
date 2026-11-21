@@ -320,4 +320,10 @@
     <string name="about_offload_title">DSP on-demand (hardware offload)</string>
     <string name="about_offload_body">A fork-only switch under Settings → cvby tweaks → Audio engine. When on, the decoded track is handed to the audio HAL through COMPRESS_OFFLOAD, so the DSP does the mixing instead of the CPU — this is what keeps playback cheap on battery. It only engages with the System default output mode and with no extra DSP processor in the chain.</string>
     <string name="about_offload_note">Off falls back to the CPU-side float PCM path: more compatible, slightly heavier. The Hi-Res sample-rate cap and surround downmix each force that same PCM path, so all three are mutually exclusive — turning one on switches the others off automatically.</string>
+    <string name="dash_jellyfin_sync_favorites_title">Sync favourites</string>
+    <string name="dash_jellyfin_sync_favorites_subtitle">Two-way sync liked songs with Jellyfin favourites</string>
+    <string name="dash_jellyfin_sync_favorites_synced">Favourites synced with Jellyfin</string>
+    <string name="dash_jellyfin_sync_favorites_failed">Could not sync favourites with Jellyfin</string>
+    <string name="home_recently_added_title">Recently added</string>
+    <string name="home_recently_added_play_cd">Play recently added songs</string>
 </resources>

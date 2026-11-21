@@ -110,6 +110,24 @@ class SyncWorkerRequestTest {
     }
 
     @Test
+    fun `changed album grouping scans all local songs without destructive rebuild or cloud maintenance`() {
+        val plan = buildSyncExecutionPlan(
+            requestedMode = SyncMode.INCREMENTAL,
+            requestedForceMetadata = false,
+            requestedRunMaintenance = false,
+            rescanRequired = false,
+            directoryRulesChanged = false,
+            isFreshInstall = false,
+            albumGroupingChanged = true
+        )
+
+        assertEquals(LocalScanMode.LOCAL_RESCAN, plan.localScanMode)
+        assertEquals(0L, localFetchTimestampSeconds(plan, false, false, 100_000L))
+        assertFalse(plan.resetExistingLocalData)
+        assertFalse(plan.runMaintenance)
+    }
+
+    @Test
     fun `artist settings force deep metadata rescan while directory settings stay shallow`() {
         val artistPlan = buildSyncExecutionPlan(
             requestedMode = SyncMode.INCREMENTAL,
@@ -137,6 +155,24 @@ class SyncWorkerRequestTest {
         assertEquals(LocalScanMode.LOCAL_RESCAN, directoryPlan.localScanMode)
         assertTrue(directoryPlan.forceProcessAll)
         assertFalse(directoryPlan.forceMetadata)
+    }
+
+    @Test
+    fun `tag backfill revisits unchanged tracks without enabling deep audio analysis or clearing the library`() {
+        val plan = buildSyncExecutionPlan(
+            requestedMode = SyncMode.INCREMENTAL,
+            requestedForceMetadata = false,
+            requestedRunMaintenance = false,
+            rescanRequired = false,
+            directoryRulesChanged = false,
+            isFreshInstall = false,
+            embeddedTagScanRequired = true
+        )
+
+        assertEquals(LocalScanMode.LOCAL_RESCAN, plan.localScanMode)
+        assertTrue(plan.forceProcessAll)
+        assertFalse(plan.forceMetadata)
+        assertFalse(plan.resetExistingLocalData)
     }
 
     @Test

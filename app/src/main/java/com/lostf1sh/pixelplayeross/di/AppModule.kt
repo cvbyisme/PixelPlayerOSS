@@ -302,11 +302,13 @@ object AppModule {
         playlistPreferencesRepository: PlaylistPreferencesRepository,
         searchHistoryDao: SearchHistoryDao,
         musicDao: MusicDao,
+        database: PixelPlayerDatabase,
         lyricsRepository: LyricsRepository,
         songRepository: SongRepository,
         favoritesDao: FavoritesDao,
         artistImageRepository: ArtistImageRepository,
-        folderTreeBuilder: FolderTreeBuilder
+        folderTreeBuilder: FolderTreeBuilder,
+        jellyfinRepository: com.lostf1sh.pixelplayeross.data.jellyfin.JellyfinRepository
     ): MusicRepository {
         return MusicRepositoryImpl(
             context = context,
@@ -314,11 +316,13 @@ object AppModule {
             playlistPreferencesRepository = playlistPreferencesRepository,
             searchHistoryDao = searchHistoryDao,
             musicDao = musicDao,
+            database = database,
             lyricsRepository = lyricsRepository,
             songRepository = songRepository,
             favoritesDao = favoritesDao,
             artistImageRepository = artistImageRepository,
-            folderTreeBuilder = folderTreeBuilder
+            folderTreeBuilder = folderTreeBuilder,
+            jellyfinRepository = jellyfinRepository
         )
 
     }

@@ -22,10 +22,15 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.core.view.WindowCompat
 import com.lostf1sh.pixelplayeross.data.preferences.AppBackgroundConfig
 import com.lostf1sh.pixelplayeross.data.preferences.PlayerUiConfig
+import com.lostf1sh.pixelplayeross.data.preferences.InterfaceAppearance
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.ColorSchemePair
 import androidx.core.graphics.ColorUtils
@@ -59,6 +64,7 @@ fun ColorScheme.withTranslucentSurfaces(
     surfaceContainerHighest = surfaceContainerHighest.copy(alpha = containerAlpha + 0.15f),
     surfaceVariant = surfaceVariant.copy(alpha = containerAlpha)
 )
+internal val LocalUseSystemFont = staticCompositionLocalOf { false }
 
 private tailrec fun Context.findActivity(): Activity? = when (this) {
     is Activity -> this
@@ -190,6 +196,7 @@ fun PixelPlayerTheme(
     appBackground: AppBackgroundConfig = AppBackgroundConfig(),
     playerUiConfig: PlayerUiConfig = PlayerUiConfig(),
     libraryBackgroundColor: Color? = null,
+    interfaceAppearance: InterfaceAppearance = InterfaceAppearance(),
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -224,7 +231,25 @@ fun PixelPlayerTheme(
         color = finalColorScheme.background,
         navigationColor = finalColorScheme.background
     )
+
+    val systemDensity = LocalDensity.current
+    val scalePercent = interfaceAppearance.scalePercent
+    val interfaceDensity = remember(systemDensity, scalePercent) {
+        if (scalePercent == InterfaceAppearance.DEFAULT_SCALE) {
+            systemDensity
+        } else {
+            object : Density {
+                override val density = systemDensity.density * scalePercent / 100f
+                override val fontScale = systemDensity.fontScale
+                override fun Dp.toSp(): TextUnit = with(systemDensity) { this@toSp.toSp() }
+                override fun TextUnit.toDp(): Dp = with(systemDensity) { this@toDp.toDp() }
+            }
+        }
+    }
+
     CompositionLocalProvider(
+        LocalDensity provides interfaceDensity,
+        LocalUseSystemFont provides interfaceAppearance.useSystemFont,
         LocalPixelPlayerDarkTheme provides (darkTheme || isAmoled),
         LocalPixelPlayerAmoledTheme provides isAmoled,
         LocalAppBackground provides appBackground,
@@ -234,7 +259,7 @@ fun PixelPlayerTheme(
         MaterialTheme(
             colorScheme = appliedColorScheme,
             motionScheme = MotionScheme.expressive(),
-            typography = Typography,
+            typography = if (interfaceAppearance.useSystemFont) SystemTypography else Typography,
             shapes = Shapes,
             content = content
         )

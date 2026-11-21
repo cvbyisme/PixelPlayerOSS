@@ -26,12 +26,16 @@ internal fun buildSyncExecutionPlan(
     requestedRunMaintenance: Boolean,
     rescanRequired: Boolean,
     directoryRulesChanged: Boolean,
-    isFreshInstall: Boolean
+    isFreshInstall: Boolean,
+    embeddedTagScanRequired: Boolean = false,
+    albumGroupingChanged: Boolean = false
 ): SyncExecutionPlan {
     val forceProcessAll = requestedMode != SyncMode.INCREMENTAL ||
         rescanRequired ||
         directoryRulesChanged ||
-        isFreshInstall
+        albumGroupingChanged ||
+        isFreshInstall ||
+        embeddedTagScanRequired
     val resetExistingLocalData = requestedMode == SyncMode.REBUILD
     // Artist delimiter changes must re-read the physical tags as well as rebuild relationships.
     // MediaStore often exposes only the first ARTIST value, especially for Vorbis comments.

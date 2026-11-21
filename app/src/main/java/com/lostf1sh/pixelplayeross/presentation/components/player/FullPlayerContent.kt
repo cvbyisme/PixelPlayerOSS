@@ -22,6 +22,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.slideInVertically
@@ -33,6 +35,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -48,8 +51,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.ColorScheme
@@ -64,9 +70,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
@@ -81,6 +90,9 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.layout
+import kotlin.math.roundToInt
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -92,9 +104,11 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.core.content.ContextCompat
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
 import androidx.compose.ui.unit.sp
@@ -201,6 +215,11 @@ private suspend fun validateLyricsImport(
     } ?: LyricsImportValidationResult.Invalid(LyricsImportFailureReason.EMPTY_CONTENT)
 }
 
+enum class FoldableRightPane {
+    QUEUE,
+    LYRICS
+}
+
 @androidx.annotation.OptIn(UnstableApi::class)
 @SuppressLint("StateFlowValueCalledInComposition")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -240,7 +259,8 @@ fun FullPlayerContent(
     onQueueRelease: (Float, Float) -> Unit,
     onShuffleToggle: () -> Unit,
     onRepeatToggle: () -> Unit,
-    onFavoriteToggle: () -> Unit
+    onFavoriteToggle: () -> Unit,
+    onSongInfoClick: (Song) -> Unit = {}
 ) {
     var retainedSong by remember { mutableStateOf(currentSong) }
     LaunchedEffect(currentSong?.id) {
@@ -250,8 +270,9 @@ fun FullPlayerContent(
     }
 
     val song = currentSong ?: retainedSong ?: return
-    var showSongInfoBottomSheet by remember { mutableStateOf(false) }
-    var showLyricsSheet by remember { mutableStateOf(false) }
+    var foldableRightPane by rememberSaveable { mutableStateOf<FoldableRightPane?>(null) }
+    var showSongInfoBottomSheet by rememberSaveable { mutableStateOf(false) }
+    var showLyricsSheet by rememberSaveable { mutableStateOf(false) }
     var showArtistPicker by rememberSaveable { mutableStateOf(false) }
     var showSaveBookmarkDialog by rememberSaveable { mutableStateOf(false) }
     var showAudioOutputSheet by rememberSaveable { mutableStateOf(false) }
@@ -279,7 +300,7 @@ fun FullPlayerContent(
         queueGestureBottomExclusion.toPx()
     }
 
-    var showFetchLyricsDialog by remember { mutableStateOf(false) }
+    var showFetchLyricsDialog by rememberSaveable { mutableStateOf(false) }
     var totalDrag by remember { mutableStateOf(0f) }
 
     val context = LocalContext.current
@@ -362,14 +383,34 @@ fun FullPlayerContent(
 
     val isLandscape =
         LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val isMediumOrExpandedWidth =
+        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val isCompactHeight =
+        !windowSizeClass.isHeightAtLeastBreakpoint(WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND)
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
+    val canFitTwoPanes = screenWidthDp >= 660.dp
+
+    val isFoldableTwoPane = isMediumOrExpandedWidth && !isCompactHeight && canFitTwoPanes
+    val isCompactLandscape = isLandscape && isCompactHeight
+    val useTwoPaneLayout = isFoldableTwoPane || isCompactLandscape
+
 
 
     val onLyricsClick = {
-        val lyrics = lyricsProvider()
-        if (lyrics?.synced.isNullOrEmpty() && lyrics?.plain.isNullOrEmpty()) {
-            showFetchLyricsDialog = true
+        if (isFoldableTwoPane) {
+            foldableRightPane = if (foldableRightPane == FoldableRightPane.LYRICS) {
+                null
+            } else {
+                FoldableRightPane.LYRICS
+            }
         } else {
-            showLyricsSheet = true
+            val lyrics = lyricsProvider()
+            if (lyrics?.synced.isNullOrEmpty() && lyrics?.plain.isNullOrEmpty()) {
+                showFetchLyricsDialog = true
+            } else {
+                showLyricsSheet = true
+            }
         }
     }
 
@@ -431,7 +472,9 @@ fun FullPlayerContent(
             is LyricsSearchUiState.Success -> {
                 if (showFetchLyricsDialog) {
                     showFetchLyricsDialog = false
-                    showLyricsSheet = true
+                    if (!isFoldableTwoPane) {
+                        showLyricsSheet = true
+                    }
                     playerViewModel.resetLyricsSearchState()
                 }
             }
@@ -568,6 +611,7 @@ fun FullPlayerContent(
             placeholderColor = placeholderColor,
             placeholderOnColor = placeholderOnColor,
             albumArtQuality = albumArtQuality,
+            fitCarouselToHeight = isCompactLandscape,
             requestedScrollIndex = pendingCarouselIndex,
             onSongSelected = onAlbumSongSelected,
             onAlbumClick = { albumSong ->
@@ -575,7 +619,7 @@ fun FullPlayerContent(
                     // User prefers the lyrics panel over the album page when tapping the cover.
                     onLyricsClick()
                 } else {
-                    playerViewModel.triggerAlbumNavigationFromPlayer(albumSong.albumId)
+                    playerViewModel.triggerAlbumNavigationFromPlayer(albumSong.albumId, albumSong.id)
                 }
             },
             modifier = modifier
@@ -651,7 +695,8 @@ fun FullPlayerContent(
             chipContentColor = playerAccentColor,
             onQueueClick = onSongMetadataQueueClick,
             onArtistClick = onSongMetadataArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            isLyricsActive = isFoldableTwoPane && foldableRightPane == FoldableRightPane.LYRICS
         )
     }
 
@@ -665,7 +710,7 @@ fun FullPlayerContent(
             currentSheetState = currentSheetState,
             placeholderColor = placeholderColor,
             placeholderOnColor = placeholderOnColor,
-            isLandscape = true,
+            isLandscape = isCompactHeight,
             onLyricsClick = onLyricsClick,
             playerOnBaseColor = playerOnBaseColor,
             playerViewModel = playerViewModel,
@@ -680,6 +725,7 @@ fun FullPlayerContent(
 
     Scaffold(
         containerColor = Color.Transparent,
+        contentWindowInsets = WindowInsets.safeDrawing,
         modifier = Modifier.pointerInput(currentSheetState, queueGestureBottomExclusionPx) {
             val queueDragActivationThresholdPx = 4.dp.toPx()
             val quickFlickVelocityThreshold = -520f
@@ -709,7 +755,7 @@ fun FullPlayerContent(
                     velocityTracker.addPosition(change.uptimeMillis, change.position)
                     val isDraggingUp = totalDrag < -queueDragActivationThresholdPx
 
-                    if (isDraggingUp && !dragConsumedByQueue) {
+                    if (!isFoldableTwoPane && isDraggingUp && !dragConsumedByQueue) {
                         dragConsumedByQueue = true
                         onQueueDragStart()
                     }
@@ -733,7 +779,7 @@ fun FullPlayerContent(
         },
         topBar = {
             AnimatedVisibility(
-                visible = !isLandscape,
+                visible = !isCompactHeight,
                 enter = fadeIn(animationSpec = tween(350, easing = FastOutSlowInEasing)) +
                         slideInVertically(
                             initialOffsetY = { -it / 2 },
@@ -854,17 +900,35 @@ fun FullPlayerContent(
                                 modifier = Modifier
                                     .size(42.dp)
                                     .clip(CircleShape)
-                                    .background(playerOnAccentColor.copy(alpha = 0.7f))
+                                    .background(
+                                        if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
+                                            playerAccentColor.copy(alpha = 0.9f)
+                                        } else {
+                                            playerOnAccentColor.copy(alpha = 0.7f)
+                                        }
+                                    )
                                     .clickable {
-                                        showSongInfoBottomSheet = true
-                                        onShowQueueClicked()
+                                        if (isFoldableTwoPane) {
+                                            foldableRightPane = if (foldableRightPane == FoldableRightPane.QUEUE) {
+                                                null
+                                            } else {
+                                                FoldableRightPane.QUEUE
+                                            }
+                                        } else {
+                                            showSongInfoBottomSheet = true
+                                            onShowQueueClicked()
+                                        }
                                     },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.rounded_queue_music_24),
                                     contentDescription = stringResource(R.string.presentation_batch_g_player_cd_queue),
-                                    tint = playerAccentColor
+                                    tint = if (isFoldableTwoPane && foldableRightPane == FoldableRightPane.QUEUE) {
+                                        playerOnAccentColor
+                                    } else {
+                                        playerAccentColor
+                                    }
                                 )
                             }
                         }
@@ -873,8 +937,8 @@ fun FullPlayerContent(
             }
         }
     ) { paddingValues ->
-        var contentVisible by remember(isLandscape) { mutableStateOf(false) }
-        LaunchedEffect(isLandscape) { contentVisible = true }
+        var contentVisible by remember(useTwoPaneLayout) { mutableStateOf(true) }
+        LaunchedEffect(useTwoPaneLayout) { contentVisible = true }
         val contentAlpha by animateFloatAsState(
             targetValue = if (contentVisible) 1f else 0f,
             animationSpec = tween(durationMillis = 380, easing = FastOutSlowInEasing),
@@ -885,7 +949,82 @@ fun FullPlayerContent(
                 .fillMaxSize()
                 .graphicsLayer { alpha = contentAlpha }
         ) {
-            if (isLandscape) {
+            if (isFoldableTwoPane) {
+                FullPlayerTwoPaneFoldableContent(
+                    paddingValues = paddingValues,
+                    albumCoverSection = albumCoverSection,
+                    songMetadataSection = portraitSongMetadataSection,
+                    playerProgressSection = playerProgressSection,
+                    controlsSection = controlsSection,
+                    isRightPaneVisible = foldableRightPane != null,
+                    rightPaneContent = { rightPaneModifier ->
+                        var lastNonNullPane by remember { mutableStateOf<FoldableRightPane?>(FoldableRightPane.LYRICS) }
+                        if (foldableRightPane != null) {
+                            lastNonNullPane = foldableRightPane
+                        }
+                        val currentTargetPane = foldableRightPane ?: lastNonNullPane
+                        AnimatedContent(
+                            targetState = currentTargetPane,
+                            transitionSpec = {
+                                fadeIn(animationSpec = tween(180, easing = FastOutSlowInEasing))
+                                    .togetherWith(
+                                        fadeOut(animationSpec = tween(140, easing = FastOutSlowInEasing))
+                                    )
+                            },
+                            label = "foldableRightPaneContent"
+                        ) { targetPane ->
+                            when (targetPane) {
+                                FoldableRightPane.QUEUE -> {
+                                    EmbeddedQueuePane(
+                                        queue = currentPlaybackQueue,
+                                        currentQueueSourceName = currentQueueSourceName,
+                                        currentSongId = song.id,
+                                        currentMediaItemIndex = currentMediaItemIndex,
+                                        isPlaying = isPlayingProvider(),
+                                        onPlaySong = onAlbumSongSelected,
+                                        onRemoveSong = { playerViewModel.removeSongFromQueue(it) },
+                                        onReorder = { from, to -> playerViewModel.reorderQueueItem(from, to) },
+                                        onSongInfoClick = onSongInfoClick,
+                                        onClose = { foldableRightPane = null },
+                                        isShuffleOn = isShuffleEnabled,
+                                        repeatMode = repeatMode,
+                                        onToggleShuffle = onShuffleToggle,
+                                        onToggleRepeat = onRepeatToggle,
+                                        playerViewModel = playerViewModel,
+                                        modifier = rightPaneModifier
+                                    )
+                                }
+                                FoldableRightPane.LYRICS -> {
+                                    EmbeddedLyricsPane(
+                                        stablePlayerStateFlow = playerViewModel.stablePlayerState,
+                                        playbackPositionFlow = playerViewModel.currentPlaybackPosition,
+                                        lyricsSyncOffset = lyricsSyncOffset,
+                                        onLyricsSyncOffsetChange = { currentSong?.id?.let { songId -> playerViewModel.setLyricsSyncOffset(songId, it) } },
+                                        lyricsTextStyle = MaterialTheme.typography.titleLarge,
+                                        colorScheme = LocalMaterialTheme.current,
+                                        onSeekTo = { playerViewModel.seekTo(it) },
+                                        onExpand = { showLyricsSheet = true },
+                                        onClose = { foldableRightPane = null },
+                                        onSearchLyrics = { showFetchLyricsDialog = true },
+                                        onImportLyrics = { filePickerLauncher.launch(com.lostf1sh.pixelplayeross.utils.LyricsImportSecurity.pickerMimeTypes()) },
+                                        onResetLyrics = { playerViewModel.resetLyricsForCurrentSong() },
+                                        onSaveLyricsToFile = playerViewModel::saveLyricsToFile,
+                                        isShuffleEnabled = isShuffleEnabled,
+                                        repeatMode = repeatMode,
+                                        isFavoriteProvider = isFavoriteProvider,
+                                        onShuffleToggle = onShuffleToggle,
+                                        onRepeatToggle = onRepeatToggle,
+                                        onFavoriteToggle = onFavoriteToggle,
+                                        isPlayerExpanded = currentSheetState == PlayerSheetState.EXPANDED,
+                                        modifier = rightPaneModifier
+                                    )
+                                }
+                                null -> Unit
+                            }
+                        }
+                    }
+                )
+            } else if (isCompactLandscape) {
                 FullPlayerLandscapeContent(
                     paddingValues = paddingValues,
                     albumCoverSection = albumCoverSection,
@@ -1000,6 +1139,7 @@ private fun FullPlayerAlbumCoverSection(
     placeholderColor: Color,
     placeholderOnColor: Color,
     albumArtQuality: AlbumArtQuality,
+    fitCarouselToHeight: Boolean,
     requestedScrollIndex: Int?,
     onSongSelected: (Song, Int) -> Unit,
     onAlbumClick: (Song) -> Unit,
@@ -1016,13 +1156,24 @@ private fun FullPlayerAlbumCoverSection(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 8.dp),
+        contentAlignment = Alignment.Center
     ) {
-        val carouselHeight = when (carouselStyle) {
-            CarouselStyle.NO_PEEK -> maxWidth
-            CarouselStyle.ONE_PEEK -> maxWidth * 0.8f
-            CarouselStyle.TWO_PEEK -> maxWidth * 0.6f
-            else -> maxWidth * 0.8f
+        val pageWidthFraction = when {
+            currentPlaybackQueue.size == 1 || carouselStyle == CarouselStyle.NO_PEEK -> 1f
+            carouselStyle == CarouselStyle.TWO_PEEK -> 0.6f
+            else -> 0.8f
+        }
+        val baseCarouselHeight = maxWidth * pageWidthFraction
+        val carouselHeight = if (maxHeight != Dp.Infinity && maxHeight > 0.dp) {
+            minOf(baseCarouselHeight, maxHeight * 0.85f)
+        } else {
+            baseCarouselHeight
+        }
+        val carouselWidth = if (fitCarouselToHeight || carouselHeight < baseCarouselHeight) {
+            minOf(maxWidth, carouselHeight / pageWidthFraction)
+        } else {
+            maxWidth
         }
 
         DelayedContent(
@@ -1031,7 +1182,7 @@ private fun FullPlayerAlbumCoverSection(
             applyPlaceholderDelayOnClose = loadingTweaks.applyPlaceholdersOnClose,
             switchOnDragRelease = loadingTweaks.switchOnDragRelease,
             isSheetDragGestureActive = isSheetDragGestureActive,
-            sharedBoundsModifier = Modifier.fillMaxWidth().height(carouselHeight),
+            sharedBoundsModifier = Modifier.width(carouselWidth).height(carouselHeight),
             expansionFractionProvider = expansionFractionProvider,
             isExpandedOverride = currentSheetState == PlayerSheetState.EXPANDED,
             normalStartThreshold = 0.08f,
@@ -1310,7 +1461,8 @@ private fun FullPlayerSongMetadataSection(
     chipContentColor: Color,
     onQueueClick: () -> Unit,
     onArtistClick: () -> Unit,
-    isPlayingProvider: () -> Boolean = { true }
+    isPlayingProvider: () -> Boolean = { true },
+    isLyricsActive: Boolean = false
 ) {
     val shouldDelay = loadingTweaks.delayAll || loadingTweaks.delaySongMetadata
 
@@ -1355,7 +1507,8 @@ private fun FullPlayerSongMetadataSection(
             showQueueButton = isLandscape,
             onClickQueue = onQueueClick,
             onClickArtist = onArtistClick,
-            isPlayingProvider = isPlayingProvider
+            isPlayingProvider = isPlayingProvider,
+            isLyricsActive = isLyricsActive
         )
     }
 }
@@ -1396,6 +1549,135 @@ private fun FullPlayerPortraitContent(
 }
 
 @Composable
+private fun FullPlayerTwoPaneFoldableContent(
+    paddingValues: PaddingValues,
+    albumCoverSection: @Composable (Modifier) -> Unit,
+    songMetadataSection: @Composable () -> Unit,
+    playerProgressSection: @Composable () -> Unit,
+    controlsSection: @Composable () -> Unit,
+    isRightPaneVisible: Boolean,
+    rightPaneContent: @Composable (Modifier) -> Unit
+) {
+    val transitionProgressState = animateFloatAsState(
+        targetValue = if (isRightPaneVisible) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = 280,
+            easing = FastOutSlowInEasing
+        ),
+        label = "foldableTwoPaneTransition"
+    )
+
+    BoxWithConstraints(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(
+                start = 24.dp,
+                end = 24.dp,
+                top = 8.dp,
+                bottom = 16.dp
+            )
+    ) {
+        val density = LocalDensity.current
+        val horizontalSpacing = 20.dp
+        val maxHalfWidth = (maxWidth - horizontalSpacing) / 2
+        val openWidth = maxHalfWidth.coerceAtLeast(0.dp)
+        val closedWidth = minOf(520.dp, maxWidth)
+
+        val closedWidthPx = with(density) { closedWidth.toPx() }
+        val openWidthPx = with(density) { openWidth.toPx() }
+        val closedXPx = with(density) { ((maxWidth - closedWidth) / 2).toPx() }
+        val rightPaneXPx = with(density) { (openWidth + horizontalSpacing).toPx() }
+        val rightPaneSlideOffsetPx = with(density) { 36.dp.toPx() }
+
+        // Left Pane: Player Controls and Album Art
+        // Large & centered when closed (no empty space), transitions smoothly to left half when open
+        Box(
+            modifier = Modifier
+                .fillMaxHeight()
+                .layout { measurable, constraints ->
+                    val progress = transitionProgressState.value
+                    val currentWidth = (closedWidthPx + (openWidthPx - closedWidthPx) * progress).roundToInt()
+                    val placeable = measurable.measure(
+                        Constraints.fixed(currentWidth, constraints.maxHeight)
+                    )
+                    layout(currentWidth, placeable.height) {
+                        placeable.place(0, 0)
+                    }
+                }
+                .graphicsLayer {
+                    val progress = transitionProgressState.value
+                    translationX = closedXPx * (1f - progress)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            PlayerColumnContent(
+                albumCoverSection = albumCoverSection,
+                songMetadataSection = songMetadataSection,
+                playerProgressSection = playerProgressSection,
+                controlsSection = controlsSection
+            )
+        }
+
+        // Right Pane: Queue or Lyrics (fixed width, GPU slide + fade, zero distortion)
+        val isPaneMounted by remember(isRightPaneVisible) {
+            derivedStateOf {
+                isRightPaneVisible || transitionProgressState.value > 0.005f
+            }
+        }
+        if (isPaneMounted) {
+            Box(
+                modifier = Modifier
+                    .width(openWidth)
+                    .fillMaxHeight()
+                    .graphicsLayer {
+                        val progress = transitionProgressState.value
+                        translationX = rightPaneXPx + (1f - progress) * rightPaneSlideOffsetPx
+                        alpha = progress.coerceIn(0f, 1f)
+                    }
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                rightPaneContent(Modifier.fillMaxSize())
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerColumnContent(
+    albumCoverSection: @Composable (Modifier) -> Unit,
+    songMetadataSection: @Composable () -> Unit,
+    playerProgressSection: @Composable () -> Unit,
+    controlsSection: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            contentAlignment = Alignment.Center
+        ) {
+            albumCoverSection(Modifier.fillMaxWidth())
+        }
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            songMetadataSection()
+            playerProgressSection()
+            controlsSection()
+        }
+    }
+}
+
+@Composable
 private fun FullPlayerLandscapeContent(
     paddingValues: PaddingValues,
     albumCoverSection: @Composable (Modifier) -> Unit,
@@ -1408,7 +1690,7 @@ private fun FullPlayerLandscapeContent(
             .fillMaxSize()
             .padding(paddingValues)
             .padding(
-                horizontal = 24.dp,
+                horizontal = 28.dp,
                 vertical = 0.dp
             ),
         verticalAlignment = Alignment.CenterVertically
@@ -1418,20 +1700,26 @@ private fun FullPlayerLandscapeContent(
                 .fillMaxHeight()
                 .weight(1f)
         )
-        Spacer(Modifier.width(9.dp))
+        Spacer(Modifier.width(20.dp))
         Column(
             modifier = Modifier
                 .fillMaxHeight()
                 .weight(1f)
+                .verticalScroll(rememberScrollState())
                 .padding(
-                    horizontal = 0.dp,
-                    vertical = 0.dp
+                    horizontal = 4.dp,
+                    vertical = 8.dp
                 ),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceEvenly
+            verticalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterVertically)
         ) {
-            songMetadataSection()
-            playerProgressSection()
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                songMetadataSection()
+                playerProgressSection()
+            }
             controlsSection()
         }
     }
@@ -1455,7 +1743,8 @@ private fun SongMetadataDisplaySection(
     onClickQueue: () -> Unit,
     onClickArtist: () -> Unit,
     modifier: Modifier = Modifier,
-    isPlayingProvider: () -> Boolean = { true }
+    isPlayingProvider: () -> Boolean = { true },
+    isLyricsActive: Boolean = false
 ) {
     Row(
         modifier
@@ -1584,8 +1873,8 @@ private fun SongMetadataDisplaySection(
                 modifier = Modifier
                     .size(width = 48.dp, height = 48.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = chipColor,
-                    contentColor = chipContentColor
+                    containerColor = if (isLyricsActive) chipContentColor else chipColor,
+                    contentColor = if (isLyricsActive) chipColor else chipContentColor
                 ),
                 onClick = onClickLyrics,
             ) {
@@ -1885,25 +2174,28 @@ private fun EfficientTimeLabels(
             .fillMaxWidth()
             .padding(horizontal = horizontalTrackInset)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.Center),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                posStr,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                fontWeight = FontWeight.SemiBold,
-                color = textColor
-            )
-            Text(
-                durStr,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                fontWeight = FontWeight.SemiBold,
-                color = textColor
-            )
+        // Match the always-LTR seek bar: elapsed under its start, duration under its end.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    posStr,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColor
+                )
+                Text(
+                    durStr,
+                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColor
+                )
+            }
         }
 
         if (!audioMetaLabel.isNullOrBlank()) {
@@ -2209,21 +2501,28 @@ private fun AlbumPlaceholder(
     onColor: Color,
     modifier: Modifier = Modifier
 ) {
-    Surface(
+    Box(
         modifier = modifier
             .fillMaxWidth()
             .height(height),
-        shape = RoundedCornerShape(18.dp),
-        color = color,
-        tonalElevation = 0.dp
+        contentAlignment = Alignment.Center
     ) {
-        Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-            Icon(
-                modifier = Modifier.size(86.dp),
-                painter = painterResource(R.drawable.pixelplayer_base_monochrome),
-                contentDescription = null,
-                tint = onColor
-            )
+        Surface(
+            modifier = Modifier
+                .aspectRatio(1f)
+                .fillMaxHeight(),
+            shape = RoundedCornerShape(24.dp),
+            color = color,
+            tonalElevation = 0.dp
+        ) {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
+                Icon(
+                    modifier = Modifier.size(86.dp),
+                    painter = painterResource(R.drawable.pixelplayer_base_monochrome),
+                    contentDescription = null,
+                    tint = onColor
+                )
+            }
         }
     }
 }

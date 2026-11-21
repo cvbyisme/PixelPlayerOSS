@@ -1,16 +1,22 @@
 package com.lostf1sh.pixelplayeross.data.image
 
 import android.net.Uri
+import androidx.annotation.VisibleForTesting
 import coil.ImageLoader
 import coil.fetch.FetchResult
 import coil.fetch.Fetcher
 import coil.request.Options
+import coil.size.Size
 import com.lostf1sh.pixelplayeross.data.jellyfin.JellyfinRepository
 import kotlinx.coroutines.CancellationException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import timber.log.Timber
 import java.io.File
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 
@@ -18,13 +24,42 @@ class JellyfinCoilFetcher(
     private val uri: Uri,
     private val repository: JellyfinRepository,
     private val okHttpClient: OkHttpClient,
-    private val cacheDir: File
+    private val cacheDir: File,
+    private val requestedSize: Size? = null
 ) : Fetcher {
 
     companion object {
         private const val TAG = "JellyfinCoilFetcher"
         private val recentlyLoggedFailures = ConcurrentHashMap<String, Long>()
         private const val LOG_FAILURE_COOLDOWN_MS = 60_000L
+
+        /** Skips cover downloads after one could not connect, so offline covers don't each wait. */
+        private const val SERVER_UNREACHABLE_BACKOFF_MS = 30_000L
+
+        @Volatile
+        private var serverUnreachableUntilNanos = 0L
+
+        private fun isServerUnreachable(): Boolean =
+            serverUnreachableUntilNanos != 0L && System.nanoTime() - serverUnreachableUntilNanos < 0
+
+        private fun markServerUnreachable() {
+            serverUnreachableUntilNanos =
+                System.nanoTime() + SERVER_UNREACHABLE_BACKOFF_MS * 1_000_000L
+        }
+
+        private fun markServerReachable() {
+            serverUnreachableUntilNanos = 0L
+        }
+
+        @VisibleForTesting
+        internal fun resetServerReachability() = markServerReachable()
+
+        /** Connect failures only: a read timeout means the server is up but slow. */
+        private fun isConnectionFailure(e: Throwable): Boolean =
+            e is ConnectException ||
+                e is NoRouteToHostException ||
+                e is UnknownHostException ||
+                (e is SocketTimeoutException && e.message?.contains("connect", ignoreCase = true) == true)
 
         private fun shouldLogFailure(key: String): Boolean {
             val now = System.currentTimeMillis()
@@ -55,14 +90,20 @@ class JellyfinCoilFetcher(
             return null
         }
 
-        val sizeParam = uri.getQueryParameter("size")?.toIntOrNull()
-            ?: RemoteArtworkCache.DEFAULT_COVER_SIZE_PX
+        val sizeParam = resolveCloudCoverSize(
+            explicitSizeParam = uri.getQueryParameter("size")?.toIntOrNull(),
+            requestedSize = requestedSize
+        )
 
         val cachedFile = File(
             cacheDir,
             RemoteArtworkCache.cacheFileName("jellyfin_cover", itemId, sizeParam)
         )
         RemoteArtworkCache.cachedResult(cachedFile)?.let { return it }
+
+        if (isServerUnreachable()) {
+            return cachedAlbumCover(itemId, sizeParam)
+        }
 
         val imageUrl = repository.getImageUrl(itemId, sizeParam)
         if (imageUrl.isNullOrBlank()) {
@@ -81,14 +122,27 @@ class JellyfinCoilFetcher(
                 .get()
                 .build()
             RemoteArtworkCache.download(okHttpClient, request, cachedFile)
+                .also { markServerReachable() }
         } catch (e: Exception) {
             // A cancelled fetch (its list item scrolled away) is not a failed download.
             if (e is CancellationException) throw e
+            if (isConnectionFailure(e)) markServerUnreachable()
             if (shouldLogFailure("download_$itemId")) {
                 Timber.w(e, "$TAG: Failed to download cover art for $itemId")
             }
-            null
+            cachedAlbumCover(itemId, sizeParam)
         }
+    }
+
+    /**
+     * Cached cover of [itemId]'s album, for when the song's own cover can't be fetched (e.g.
+     * offline). Never cached as the song's cover.
+     */
+    private suspend fun cachedAlbumCover(itemId: String, sizePx: Int): FetchResult? {
+        val albumCoverId = repository.getAlbumCoverItemId(itemId) ?: return null
+        return RemoteArtworkCache.cachedResult(
+            File(cacheDir, RemoteArtworkCache.cacheFileName("jellyfin_cover", albumCoverId, sizePx))
+        )
     }
 
     class Factory @Inject constructor(
@@ -101,7 +155,7 @@ class JellyfinCoilFetcher(
         override fun create(data: Uri, options: Options, imageLoader: ImageLoader): Fetcher? {
             return if (data.scheme == "jellyfin_cover") {
                 val cache = cacheDir ?: options.context.cacheDir.also { cacheDir = it }
-                JellyfinCoilFetcher(data, repository, okHttpClient, cache)
+                JellyfinCoilFetcher(data, repository, okHttpClient, cache, options.size)
             } else {
                 null
             }

@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -67,7 +68,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +80,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -116,11 +117,9 @@ fun PlaylistContainer(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     bottomBarHeight: Dp,
-    currentSong: Song? = null,
     navController: NavController?,
     playerViewModel: PlayerViewModel,
     isAddingToPlaylist: Boolean = false,
-    selectedPlaylists: SnapshotStateMap<String, Boolean>? = null,
     filteredPlaylists: ImmutableList<Playlist> = playlistUiState.playlists,
     currentSortOption: SortOption? = null,
     isSelectionMode: Boolean = false,
@@ -183,17 +182,37 @@ fun PlaylistContainer(
                 }
             }
         } else {
+            val playlistItems: @Composable () -> Unit = {
+                if (isGridView) {
+                    PlaylistGridItems(
+                        bottomBarHeight = bottomBarHeight,
+                        navController = navController,
+                        playerViewModel = playerViewModel,
+                        filteredPlaylists = filteredPlaylists,
+                        currentSortOption = currentSortOption,
+                        isAddingToPlaylist = isAddingToPlaylist,
+                        isSelectionMode = isSelectionMode,
+                        selectedPlaylistIds = selectedPlaylistIds,
+                        onPlaylistLongPress = onPlaylistLongPress,
+                        onPlaylistSelectionToggle = onPlaylistSelectionToggle
+                    )
+                } else {
+                    PlaylistItems(
+                        bottomBarHeight = bottomBarHeight,
+                        navController = navController,
+                        playerViewModel = playerViewModel,
+                        filteredPlaylists = filteredPlaylists,
+                        currentSortOption = currentSortOption,
+                        isAddingToPlaylist = isAddingToPlaylist,
+                        isSelectionMode = isSelectionMode,
+                        selectedPlaylistIds = selectedPlaylistIds,
+                        onPlaylistLongPress = onPlaylistLongPress,
+                        onPlaylistSelectionToggle = onPlaylistSelectionToggle
+                    )
+                }
+            }
             if (isAddingToPlaylist) {
-                PlaylistItems(
-                    currentSong = currentSong,
-                    bottomBarHeight = bottomBarHeight,
-                    navController = navController,
-                    playerViewModel = playerViewModel,
-                    isAddingToPlaylist = true,
-                    filteredPlaylists = filteredPlaylists,
-                    selectedPlaylists = selectedPlaylists,
-                    currentSortOption = currentSortOption
-                )
+                playlistItems()
             } else {
                 val playlistPullToRefreshState = rememberPullToRefreshState()
                 PullToRefreshBox(
@@ -209,31 +228,7 @@ fun PlaylistContainer(
                         )
                     }
                 ) {
-                    if (isGridView) {
-                        PlaylistGridItems(
-                            bottomBarHeight = bottomBarHeight,
-                            navController = navController,
-                            playerViewModel = playerViewModel,
-                            filteredPlaylists = filteredPlaylists,
-                            currentSortOption = currentSortOption,
-                            isSelectionMode = isSelectionMode,
-                            selectedPlaylistIds = selectedPlaylistIds,
-                            onPlaylistLongPress = onPlaylistLongPress,
-                            onPlaylistSelectionToggle = onPlaylistSelectionToggle
-                        )
-                    } else {
-                        PlaylistItems(
-                            bottomBarHeight = bottomBarHeight,
-                            navController = navController,
-                            playerViewModel = playerViewModel,
-                            filteredPlaylists = filteredPlaylists,
-                            currentSortOption = currentSortOption,
-                            isSelectionMode = isSelectionMode,
-                            selectedPlaylistIds = selectedPlaylistIds,
-                            onPlaylistLongPress = onPlaylistLongPress,
-                            onPlaylistSelectionToggle = onPlaylistSelectionToggle
-                        )
-                    }
+                    playlistItems()
                 }
             }
 
@@ -259,12 +254,10 @@ fun PlaylistContainer(
 fun PlaylistItems(
     bottomBarHeight: Dp,
     navController: NavController?,
-    currentSong: Song? = null,
     playerViewModel: PlayerViewModel,
     isAddingToPlaylist: Boolean = false,
     filteredPlaylists: ImmutableList<Playlist>,
     currentSortOption: SortOption? = null,
-    selectedPlaylists: SnapshotStateMap<String, Boolean>? = null,
     isSelectionMode: Boolean = false,
     selectedPlaylistIds: Set<String> = emptySet(),
     onPlaylistLongPress: (Playlist) -> Unit = {},
@@ -312,20 +305,8 @@ fun PlaylistItems(
             contentPadding = PaddingValues(bottom = bottomBarHeight + MiniPlayerHeight + 30.dp)
         ) {
             itemsIndexed(filteredPlaylists, key = { _, playlist -> playlist.id }) { index, playlist ->
-                val rememberedOnClick = remember(playlist.id) {
-                    {
-                        if (isAddingToPlaylist && currentSong != null && selectedPlaylists != null) {
-                            val currentSelection = selectedPlaylists[playlist.id] ?: false
-                            selectedPlaylists[playlist.id] = !currentSelection
-                        } else if (isSelectionMode) {
-                            onPlaylistSelectionToggle(playlist)
-                        } else {
-                            navController?.navigateSafely(Screen.PlaylistDetail.createRoute(playlist.id))
-                        }
-                    }
-                }
-                val selectionIndex = remember(playlist.id, selectedPlaylistIds) {
-                    if (selectedPlaylistIds.contains(playlist.id)) {
+                val selectionIndex = remember(playlist.id, isSelectionMode, selectedPlaylistIds) {
+                    if (isSelectionMode && playlist.id in selectedPlaylistIds) {
                         selectedPlaylistIds.toList().indexOf(playlist.id)
                     } else {
                         -1
@@ -334,15 +315,19 @@ fun PlaylistItems(
                 PlaylistItem(
                     playlist = playlist,
                     playerViewModel = playerViewModel,
-                    onClick = { rememberedOnClick() },
+                    onClick = {
+                        if (isAddingToPlaylist || isSelectionMode) {
+                            onPlaylistSelectionToggle(playlist)
+                        } else {
+                            navController?.navigateSafely(Screen.PlaylistDetail.createRoute(playlist.id))
+                        }
+                    },
                     isAddingToPlaylist = isAddingToPlaylist,
-                    selectedPlaylists = selectedPlaylists,
                     isSelectionMode = isSelectionMode,
                     isSelected = selectedPlaylistIds.contains(playlist.id),
                     selectionIndex = selectionIndex,
                     customShape = getSegmentedItemShape(index, filteredPlaylists.size),
-                    onLongPress = { onPlaylistLongPress(playlist) },
-                    onPlaylistSelectionToggle = { onPlaylistSelectionToggle(playlist) }
+                    onLongPress = { onPlaylistLongPress(playlist) }
                 )
             }
         }
@@ -371,6 +356,7 @@ private fun PlaylistGridItems(
     playerViewModel: PlayerViewModel,
     filteredPlaylists: ImmutableList<Playlist>,
     currentSortOption: SortOption?,
+    isAddingToPlaylist: Boolean,
     isSelectionMode: Boolean,
     selectedPlaylistIds: Set<String>,
     onPlaylistLongPress: (Playlist) -> Unit,
@@ -395,7 +381,7 @@ private fun PlaylistGridItems(
         val showScrollbar = LocalShowScrollbar.current &&
             (gridState.canScrollForward || gridState.canScrollBackward)
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(minSize = 150.dp),
+            columns = GridCells.Adaptive(minSize = if (isAddingToPlaylist) 130.dp else 150.dp),
             state = gridState,
             modifier = Modifier
                 .padding(start = 12.dp, end = animatedScrollbarInset(showScrollbar, 22.dp, 12.dp), bottom = 6.dp)
@@ -407,8 +393,8 @@ private fun PlaylistGridItems(
         ) {
             items(filteredPlaylists.size, key = { filteredPlaylists[it].id }) { index ->
                 val playlist = filteredPlaylists[index]
-                val selectionIndex = remember(playlist.id, selectedPlaylistIds) {
-                    if (selectedPlaylistIds.contains(playlist.id)) {
+                val selectionIndex = remember(playlist.id, isSelectionMode, selectedPlaylistIds) {
+                    if (isSelectionMode && playlist.id in selectedPlaylistIds) {
                         selectedPlaylistIds.toList().indexOf(playlist.id)
                     } else {
                         -1
@@ -417,11 +403,12 @@ private fun PlaylistGridItems(
                 PlaylistGridItem(
                     playlist = playlist,
                     playerViewModel = playerViewModel,
+                    isAddingToPlaylist = isAddingToPlaylist,
                     isSelectionMode = isSelectionMode,
                     isSelected = selectedPlaylistIds.contains(playlist.id),
                     selectionIndex = selectionIndex,
                     onClick = {
-                        if (isSelectionMode) {
+                        if (isAddingToPlaylist || isSelectionMode) {
                             onPlaylistSelectionToggle(playlist)
                         } else {
                             navController?.navigateSafely(Screen.PlaylistDetail.createRoute(playlist.id))
@@ -451,6 +438,7 @@ private fun PlaylistGridItems(
 private fun PlaylistGridItem(
     playlist: Playlist,
     playerViewModel: PlayerViewModel,
+    isAddingToPlaylist: Boolean,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     selectionIndex: Int,
@@ -493,7 +481,13 @@ private fun PlaylistGridItem(
                 }
             )
             .clip(cardShape)
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+            .then(
+                if (isAddingToPlaylist) {
+                    Modifier.toggleable(isSelected, role = Role.Checkbox, onValueChange = { onClick() })
+                } else {
+                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongPress)
+                }
+            ),
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
@@ -523,7 +517,7 @@ private fun PlaylistGridItem(
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
                 )
             }
-            if (isSelected && isSelectionMode) {
+            if (isSelected && (isAddingToPlaylist || isSelectionMode)) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -542,7 +536,8 @@ private fun PlaylistGridItem(
                     } else {
                         Icon(
                             imageVector = Icons.Rounded.CheckCircle,
-                            contentDescription = stringResource(R.string.presentation_batch_g_cd_selected),
+                            contentDescription = if (isAddingToPlaylist) null
+                            else stringResource(R.string.presentation_batch_g_cd_selected),
                             tint = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier.size(16.dp)
                         )
@@ -560,13 +555,11 @@ fun PlaylistItem(
     playerViewModel: PlayerViewModel,
     onClick: () -> Unit,
     isAddingToPlaylist: Boolean,
-    selectedPlaylists: SnapshotStateMap<String, Boolean>? = null,
     isSelectionMode: Boolean = false,
     isSelected: Boolean = false,
     selectionIndex: Int = -1,
     customShape: androidx.compose.ui.graphics.Shape? = null,
-    onLongPress: () -> Unit = {},
-    onPlaylistSelectionToggle: () -> Unit = {}
+    onLongPress: () -> Unit = {}
 ) {
     val playlistPreviewSongIds = remember(playlist.songIds) {
         playlist.songIds.take(4)
@@ -580,7 +573,7 @@ fun PlaylistItem(
     }.collectAsStateWithLifecycle(initialValue = playlistSongsInitialValue)
 
     val selectionScale by animateFloatAsState(
-        targetValue = if (isSelected) 0.98f else 1f,
+        targetValue = if (isSelected && !isAddingToPlaylist) 0.98f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow
@@ -589,7 +582,7 @@ fun PlaylistItem(
     )
 
     val selectionBorderWidth by animateDpAsState(
-        targetValue = if (isSelected) 2.5.dp else 0.dp,
+        targetValue = if (isSelected && !isAddingToPlaylist) 2.5.dp else 0.dp,
         animationSpec = tween(durationMillis = 250),
         label = "playlistSelectionBorderAnimation"
     )
@@ -605,7 +598,7 @@ fun PlaylistItem(
     )
 
     val selectionBorderColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0f),
+        targetValue = if (isSelected && !isAddingToPlaylist) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0f),
         animationSpec = tween(durationMillis = 250),
         label = "playlistBorderColorAnimation"
     )
@@ -628,16 +621,11 @@ fun PlaylistItem(
                 }
             )
             .clip(cardShape)
-            .combinedClickable(
-                onClick = {
-                    if (isSelectionMode) {
-                        onPlaylistSelectionToggle()
-                    } else {
-                        onClick()
-                    }
-                },
-                onLongClick = {
-                    onLongPress()
+            .then(
+                if (isAddingToPlaylist) {
+                    Modifier.toggleable(isSelected, role = Role.Checkbox, onValueChange = { onClick() })
+                } else {
+                    Modifier.combinedClickable(onClick = onClick, onLongClick = onLongPress)
                 }
             ),
         shape = cardShape,
@@ -714,12 +702,9 @@ fun PlaylistItem(
                 }
             }
 
-            if (isAddingToPlaylist && selectedPlaylists != null) {
+            if (isAddingToPlaylist) {
                 Spacer(modifier = Modifier.width(8.dp))
-                Checkbox(
-                    checked = selectedPlaylists[playlist.id] ?: false,
-                    onCheckedChange = { isChecked -> selectedPlaylists[playlist.id] = isChecked }
-                )
+                Checkbox(checked = isSelected, onCheckedChange = null)
             }
         }
     }

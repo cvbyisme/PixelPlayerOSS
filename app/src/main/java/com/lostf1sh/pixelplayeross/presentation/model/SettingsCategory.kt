@@ -44,6 +44,11 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_cvby_title,
         subtitleRes = R.string.settings_category_cvby_subtitle,
         icon = Icons.Rounded.Tune
+    EQUALIZER(
+        id = "equalizer",
+        titleRes = R.string.settings_category_equalizer_title,
+        subtitleRes = R.string.settings_category_equalizer_subtitle,
+        icon = Icons.Rounded.GraphicEq
     ),
     BEHAVIOR(
         id = "behavior",
@@ -62,12 +67,6 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_developer_title,
         subtitleRes = R.string.settings_category_developer_subtitle,
         icon = Icons.Rounded.DeveloperMode
-    ),
-    EQUALIZER(
-        id = "equalizer",
-        titleRes = R.string.settings_category_equalizer_title,
-        subtitleRes = R.string.settings_category_equalizer_subtitle,
-        icon = Icons.Rounded.GraphicEq
     ),
     DEVICE_CAPABILITIES(
         id = "device_capabilities",

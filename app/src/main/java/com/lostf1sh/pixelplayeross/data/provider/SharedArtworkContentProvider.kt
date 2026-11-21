@@ -48,7 +48,11 @@ class SharedArtworkContentProvider : ContentProvider() {
                 ?.let(RemoteArtworkCache::imageMimeType)
                 ?: DEFAULT_CONTENT_TYPE
         }
-        return if (parseSongId(uri, appContext.packageName) != null) DEFAULT_CONTENT_TYPE else null
+        val songId = parseSongId(uri, appContext.packageName) ?: return null
+        val cachedFile = AlbumArtUtils.getCachedAlbumArtFile(appContext, songId)
+        return cachedFile.takeIf { it.isFile && it.canRead() }
+            ?.let(RemoteArtworkCache::imageMimeType)
+            ?: DEFAULT_CONTENT_TYPE
     }
 
     override fun insert(uri: Uri, values: ContentValues?): Uri? = null
@@ -75,8 +79,16 @@ class SharedArtworkContentProvider : ContentProvider() {
             return openCachedCloudArtwork(appContext, cloudArtworkUri)
         }
 
-        val file = resolveArtworkFile(uri)
-            ?: throw FileNotFoundException("No artwork found for uri=$uri")
+        val songId = parseSongId(uri, appContext.packageName)
+            ?: throw FileNotFoundException("Unsupported artwork URI")
+        val isSelfCaller = Binder.getCallingUid() == appContext.applicationInfo.uid
+        val file = if (isSelfCaller) {
+            AlbumArtUtils.ensureAlbumArtCachedFile(appContext, songId)
+        } else {
+            AlbumArtUtils.getOrWarmCachedAlbumArtFile(appContext, songId)
+                ?.takeIf { isSafeForExternalArtworkReader(it) }
+        }?.takeIf { it.isFile && it.canRead() }
+            ?: throw FileNotFoundException("Local artwork is unavailable")
 
         return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     }
@@ -84,15 +96,6 @@ class SharedArtworkContentProvider : ContentProvider() {
     override fun openAssetFile(uri: Uri, mode: String): AssetFileDescriptor {
         val fileDescriptor = openFile(uri, mode)
         return AssetFileDescriptor(fileDescriptor, 0, AssetFileDescriptor.UNKNOWN_LENGTH)
-    }
-
-    private fun resolveArtworkFile(uri: Uri): File? {
-        val appContext = context?.applicationContext ?: return null
-        val songId = parseSongId(uri, appContext.packageName) ?: return null
-        return AlbumArtUtils.ensureAlbumArtCachedFile(
-            appContext = appContext,
-            songId = songId
-        )?.takeIf { it.exists() && it.isFile && it.canRead() }
     }
 
     /**
@@ -207,13 +210,19 @@ class SharedArtworkContentProvider : ContentProvider() {
         ): File? {
             if (!isSupportedCloudArtworkUri(rawArtworkUri)) return null
             return RemoteArtworkCache.cacheFileFor(cacheDir, rawArtworkUri)
-                ?.takeIf { it.length() <= MAX_SHARED_CLOUD_ARTWORK_BYTES }
-                ?.takeIf(RemoteArtworkCache::isCachedImage)
-                ?.takeIf { file ->
-                    val bounds = readArtworkImageBounds(file) ?: return@takeIf false
-                    bounds.width <= MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX &&
-                        bounds.height <= MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX
-                }
+                ?.takeIf { isSafeForExternalArtworkReader(it, readArtworkImageBounds) }
+        }
+
+        internal fun isSafeForExternalArtworkReader(
+            file: File,
+            readArtworkImageBounds: (File) -> ArtworkImageBounds? = ::decodeArtworkImageBounds,
+        ): Boolean {
+            if (!file.isFile || !file.canRead()) return false
+            if (file.length() <= 0L || file.length() > MAX_SHARED_CLOUD_ARTWORK_BYTES) return false
+            if (!RemoteArtworkCache.isCachedImage(file)) return false
+            val bounds = readArtworkImageBounds(file) ?: return false
+            return bounds.width <= MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX &&
+                bounds.height <= MAX_SHARED_CLOUD_ARTWORK_DIMENSION_PX
         }
 
         /** Reads only the image header; null when the platform can't decode it. */

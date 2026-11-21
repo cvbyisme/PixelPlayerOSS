@@ -81,6 +81,8 @@
     <string name="setcat_app_theme_label">App-tema</string>
     <string name="setcat_application">Applikasjon</string>
     <string name="setcat_artists_subtitle">Alternativer for flere artister og organisering.</string>
+    <string name="setcat_group_local_albums_by_title">Grupper lokale album etter tittel</string>
+    <string name="setcat_group_local_albums_by_title_subtitle">Slår sammen lokale spor med samme albumtittel, selv om albumartistene er forskjellige. Dette kan også slå sammen urelaterte album med samme tittel.</string>
     <string name="setcat_artists_title">Artister</string>
     <string name="setcat_auto_hide_delay_desc">Tid før kontrollene skjules.</string>
     <string name="setcat_auto_hide_delay_label">Forsinkelse for autoskjuling</string>
@@ -195,6 +197,9 @@
     <string name="setcat_audio_output_mode_pcm_float">32-bit flyttalls-PCM</string>
     <string name="setcat_audio_output_mode_pcm_float_description">Større behandlingsmargin for høyoppløst PCM. Android kan fortsatt resample den; dette er ikke bitperfekt.</string>
     <string name="setcat_audio_output_mode_pcm_float_unsupported">Utilgjengelig fordi denne enheten ikke kunne initialisere en PCM_FLOAT AudioTrack.</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb">Bit-perfekt USB (eksperimentell)</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb_description">Sender hvert spor uendret til en USB-DAC, med sin egen samplingsfrekvens. Telefonen og DAC-en må støtte bit-perfekt USB-utgang, ellers brukes den vanlige banen. Volumet styres da av DAC-en, og å slå på equalizeren endrer signalet.</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb_unsupported">Krever Android 14 eller nyere og støtte for PCM_FLOAT-utgang.</string>
     <string name="setcat_persistent_shuffle_subtitle">Husk blandingsinnstilling selv etter at appen er lukket.</string>
     <string name="setcat_persistent_shuffle_title">Vedvarende blanding</string>
     <string name="setcat_player_gestures">Spiller-gester</string>

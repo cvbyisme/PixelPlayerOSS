@@ -136,6 +136,7 @@ class PlayerViewModelTest {
         every { ContextCompat.getMainExecutor(any()) } returns directExecutor
         coEvery { mockUserPreferencesRepository.favoriteSongIdsFlow } returns flowOf(emptySet())
         coEvery { mockUserPreferencesRepository.songsSortOptionFlow } returns flowOf("SongTitleAZ")
+        every { mockUserPreferencesRepository.songsSecondarySortOptionFlow } returns flowOf(null)
         coEvery { mockUserPreferencesRepository.albumsSortOptionFlow } returns flowOf("AlbumTitleAZ")
         coEvery { mockUserPreferencesRepository.artistsSortOptionFlow } returns flowOf("ArtistNameAZ")
         coEvery { mockUserPreferencesRepository.likedSongsSortOptionFlow } returns flowOf("LikedSongTitleAZ")
@@ -435,6 +436,20 @@ class PlayerViewModelTest {
     }
 
     @Test
+    fun `album navigation from player uses the reindexed album for a queued local track`() = runTest {
+        val queuedSong = Song.emptySong().copy(id = "10", albumId = 201L)
+        coEvery { mockMusicRepository.getSongsByIdsOnce(listOf(queuedSong.id)) } returns
+            listOf(queuedSong.copy(albumId = 202L))
+
+        playerViewModel.albumNavigationRequests.test {
+            playerViewModel.triggerAlbumNavigationFromPlayer(queuedSong.albumId, queuedSong.id)
+            advanceUntilIdle()
+
+            assertEquals(202L, awaitItem())
+        }
+    }
+
+    @Test
     fun `playlist playback keeps playlist id on the initial media item and the original order`() = runTest {
         mockkStatic(Uri::class)
         mockkConstructor(Bundle::class)
@@ -572,6 +587,52 @@ class PlayerViewModelTest {
                     randomSongs,
                     true
                 )
+            }
+        }
+
+        @Test
+        fun `shuffle all publishes and plays every track in a large library`() = runTest {
+            val songs = List(2_048) { index ->
+                song1.copy(
+                    id = index.toString(),
+                    albumArtUriString = null,
+                    contentUriString = "content://media/external/audio/media/$index"
+                )
+            }
+            coEvery { mockMusicRepository.getRandomSongs(any()) } answers { songs.take(firstArg()) }
+            val queueStateHolder = QueueStateHolder()
+            coEvery { mockQueueStateHolder.prepareShuffledQueueSuspending(any(), any(), any()) } coAnswers {
+                queueStateHolder.prepareShuffledQueueSuspending(firstArg(), secondArg(), thirdArg())
+            }
+
+            mockkStatic(Uri::class)
+            val playbackUri = mockk<Uri>(relaxed = true)
+            every { Uri.parse(any()) } returns playbackUri
+            every { playbackUri.scheme } returns "content"
+            coEvery { mockDualPlayerEngine.resolveMediaItem(any()) } answers { firstArg() }
+
+            val player = mockk<Player>(relaxed = true)
+            val mediaItems = mutableListOf<MediaItem>()
+            val initialMediaItem = slot<MediaItem>()
+            every { mockDualPlayerEngine.masterPlayer } returns player
+            every { player.setMediaItem(capture(initialMediaItem), 0L) } answers { mediaItems.add(firstArg()) }
+            every { player.currentMediaItem } answers { initialMediaItem.captured }
+            every { player.mediaItemCount } answers { mediaItems.size }
+            every { player.getMediaItemAt(any()) } answers { mediaItems[firstArg<Int>()] }
+            every { player.addMediaItems(any(), any()) } answers { mediaItems.addAll(firstArg(), secondArg()) }
+
+            advanceUntilIdle()
+            playerViewModel.queueFlow.test {
+                assertTrue(awaitItem().isEmpty())
+
+                playerViewModel.shuffleAllSongs()
+                val displayedQueue = awaitItem()
+                advanceUntilIdle()
+
+                assertEquals(songs.size, displayedQueue.size)
+                assertEquals(songs.map { it.id }.toSet(), displayedQueue.map { it.id }.toSet())
+                assertEquals(initialMediaItem.captured.mediaId, displayedQueue.first().id)
+                assertEquals(displayedQueue.map { it.id }, mediaItems.map { it.mediaId })
             }
         }
 

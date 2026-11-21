@@ -52,9 +52,12 @@
     <string name="setcat_excluded_directories_subtitle">Folders here will be skipped when scanning your library.</string>
     <string name="setcat_artists_title">Artists</string>
     <string name="setcat_artists_subtitle">Multi-artist parsing and organization options.</string>
+    <string name="setcat_group_local_albums_by_title">Group local albums by title</string>
+    <string name="setcat_group_local_albums_by_title_subtitle">Combine local tracks with the same album title, even when their album artists differ. This can also combine unrelated albums with the same title.</string>
     <string name="setcat_filtering">Filtering</string>
     <string name="setcat_min_song_duration">Minimum Song Duration</string>
     <string name="setcat_min_tracks_per_album">Minimum Tracks per Album</string>
+    <string name="setcat_min_tracks_per_artist">Minimum Tracks per Artist</string>
     <string name="setcat_album_art_cache_limit">Album Art Cache Limit</string>
     <string name="setcat_sync_scanning">Sync and Scanning</string>
     <string name="setcat_sync_full_rescan_label">Running full rescan</string>
@@ -107,6 +110,10 @@
     <string name="setcat_language_russian" translatable="false">Русский</string>
     <string name="setcat_language_turkish" translatable="false">Türkçe</string>
     <string name="language_zh_rCN" translatable="false">简体中文</string>
+    <string name="setcat_language_vietnamese" translatable="false">Tiếng Việt</string>
+    <string name="setcat_language_portuguese_br" translatable="false">Português (Brasil)</string>
+    <string name="setcat_language_czech" translatable="false">Čeština</string>
+    <string name="setcat_language_slovak" translatable="false">Slovenčina</string>
     <string name="setcat_app_theme_label">App Theme</string>
     <string name="setcat_app_theme_desc">Switch between light, dark, or follow system appearance.</string>
     <string name="setcat_global_now_playing_theme_title">Use now playing colors across the app</string>
@@ -115,6 +122,11 @@
     <string name="setcat_theme_preset_desc">Default follows your wallpaper colors. AMOLED uses true black surfaces and always stays dark.</string>
     <string name="setcat_theme_preset_default">Default</string>
     <string name="setcat_theme_preset_amoled">AMOLED</string>
+    <string name="setcat_system_font_title">Use system font</string>
+    <string name="setcat_system_font_subtitle">Use Android’s default typeface instead of PixelPlayer’s rounded font.</string>
+    <string name="setcat_interface_scale_title">Interface size</string>
+    <string name="setcat_interface_scale_subtitle">Resize the app’s interface without changing Android’s display settings.</string>
+    <string name="setcat_interface_scale_percent">%1$d%%</string>
     <string name="setcat_theme_light">Light Theme</string>
     <string name="setcat_theme_dark">Dark Theme</string>
     <string name="setcat_theme_follow_system">Follow System</string>
@@ -205,6 +217,9 @@
     <string name="setcat_audio_output_mode_pcm_float">32-bit float PCM</string>
     <string name="setcat_audio_output_mode_pcm_float_description">More processing headroom for high-resolution PCM. Android may still resample it; this is not bit-perfect.</string>
     <string name="setcat_audio_output_mode_pcm_float_unsupported">Unavailable because this device could not initialize a PCM_FLOAT AudioTrack.</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb">Bit-perfect USB (experimental)</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb_description">Sends each track to a USB DAC unchanged, at its own sample rate. Needs a phone and DAC that support bit-perfect USB output, otherwise the normal path is used. Volume is then set by the DAC, and turning on the equalizer changes the signal.</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb_unsupported">Requires Android 14 or newer and PCM_FLOAT output support.</string>
     <string name="setcat_persistent_shuffle_title">Persistent Shuffle</string>
     <string name="setcat_persistent_shuffle_subtitle">Remember shuffle setting even after closing the app.</string>
     <string name="setcat_show_queue_history_title">Show queue history</string>

@@ -1,5 +1,7 @@
 package com.lostf1sh.pixelplayeross.presentation.components
 
+import com.lostf1sh.pixelplayeross.ui.theme.rememberDisplayFont
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -66,9 +68,12 @@ fun ExpressiveTopBarContent(
     enableExpandedTitleWidthCompression: Boolean = true,
     titleWidthCompressionThreshold: Dp? = null,
     titleMinWidthAxis: Float = DefaultTopBarTitleCompressedWidthAxis,
+    marqueeCollapsedTitle: Boolean = false,
     supportingContent: (@Composable () -> Unit)? = null
 ) {
     val clampedFraction = collapseFraction.coerceIn(0f, 1f)
+    val marqueeTitle = marqueeCollapsedTitle && maxLines == 1 && clampedFraction == 1f &&
+        contentColor.alpha > 0f
     val titleScale = lerp(titleScaleRange.first, titleScaleRange.second, clampedFraction)
     val titlePaddingStart = lerp(expandedTitleStartPadding, collapsedTitleStartPadding, clampedFraction)
     val titlePaddingEnd = lerp(expandedTitleEndPadding, collapsedTitleEndPadding, clampedFraction)
@@ -147,10 +152,11 @@ fun ExpressiveTopBarContent(
                     style = resolvedTitleStyle,
                     color = contentColor,
                     maxLines = maxLines,
-                    overflow = TextOverflow.Ellipsis,
+                    overflow = if (marqueeTitle) TextOverflow.Clip else TextOverflow.Ellipsis,
+                    softWrap = !marqueeTitle,
                     modifier = Modifier.graphicsLayer {
                         transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0.5f)
-                    }
+                    }.albumTitleMarquee(marqueeTitle)
                 )
                 if (!subtitle.isNullOrEmpty()) {
                     Text(
@@ -179,7 +185,7 @@ private fun rememberRoundedFlexFontFamily(
     widthAxis: Float
 ): FontFamily {
     val sanitizedWidthAxis = widthAxis.coerceIn(1f, DefaultTopBarTitleWidthAxis).roundToInt().toFloat()
-    return remember(fontWeight, sanitizedWidthAxis) {
+    return rememberDisplayFont(fontWeight, sanitizedWidthAxis) {
         FontFamily(
             Font(
                 resId = R.font.gflex_variable,

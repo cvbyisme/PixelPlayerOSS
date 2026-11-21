@@ -81,6 +81,8 @@
     <string name="setcat_app_theme_label">مظهر التطبيق</string>
     <string name="setcat_application">التطبيق</string>
     <string name="setcat_artists_subtitle">خيارات تنظيم وتحليل البيانات للفنانين المتعددين.</string>
+    <string name="setcat_group_local_albums_by_title">تجميع الألبومات المحلية حسب العنوان</string>
+    <string name="setcat_group_local_albums_by_title_subtitle">دمج المقاطع المحلية التي تحمل عنوان الألبوم نفسه حتى إذا اختلف فنانو الألبوم. قد يؤدي هذا أيضًا إلى دمج ألبومات غير مرتبطة تحمل العنوان نفسه.</string>
     <string name="setcat_artists_title">الفنانون</string>
     <string name="setcat_auto_hide_delay_desc">الوقت المستغرق قبل إخفاء عناصر التحكم.</string>
     <string name="setcat_auto_hide_delay_label">مهلة الإخفاء التلقائي</string>
@@ -195,6 +197,9 @@
     <string name="setcat_audio_output_mode_pcm_float">PCM بنقطة عائمة 32 بت</string>
     <string name="setcat_audio_output_mode_pcm_float_description">مساحة معالجة أكبر لصوت PCM عالي الدقة. قد يعيد Android أخذ عيناته؛ وهذا لا يعني إخراجًا مطابقًا للبتات.</string>
     <string name="setcat_audio_output_mode_pcm_float_unsupported">غير متاح لأن هذا الجهاز لم يتمكن من تهيئة AudioTrack بصيغة PCM_FLOAT.</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb">إخراج USB مطابق للبتات (تجريبي)</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb_description">يرسل كل مقطع إلى محوّل DAC عبر USB دون تغيير وبمعدل العينات الخاص به. يتطلب هاتفًا ومحوّل DAC يدعمان إخراج USB المطابق للبتات، وإلا فسيُستخدم المسار العادي. يتحكم محوّل DAC حينها في مستوى الصوت، وتشغيل المعادل يغيّر الإشارة.</string>
+    <string name="setcat_audio_output_mode_bit_perfect_usb_unsupported">يتطلب Android 14 أو أحدث ودعم إخراج PCM_FLOAT.</string>
     <string name="setcat_persistent_shuffle_subtitle">تذكر إعداد التشغيل العشوائي والاحتفاظ به حتى بعد إغلاق التطبيق.</string>
     <string name="setcat_persistent_shuffle_title">التشغيل العشوائي الدائم</string>
     <string name="setcat_player_gestures">إيماءات المشغل</string>

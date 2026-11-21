@@ -30,6 +30,18 @@ object SettingsRegistry {
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("artist", "delimiters", "split", "multi artist", "parsing", "separator")
             ),
+            SettingSpec(
+                id = "library_group_local_albums_by_title",
+                itemKey = "item_library_group_local_albums_by_title",
+                titleRes = R.string.setcat_group_local_albums_by_title,
+                subtitleRes = R.string.setcat_group_local_albums_by_title_subtitle,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("album artist", "album title", "merge albums", "split albums", "compilation"),
+                getValue = { it.groupLocalAlbumsByTitle },
+                onToggle = { viewModel, checked -> viewModel.setGroupLocalAlbumsByTitle(checked) }
+            ),
             // Rows of the artist settings page. createRoute(), not .route: the raw route
             // already ends in "?highlightKey={highlightKey}".
             SettingSpec(
@@ -116,6 +128,15 @@ object SettingsRegistry {
                 subscreenRoute = Screen.SettingsCategory.createRoute("library"),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("tracks", "album", "filter", "singles")
+            ),
+            SettingSpec(
+                id = "library_min_artist_tracks",
+                itemKey = "item_library_min_artist_tracks",
+                titleRes = R.string.setcat_min_tracks_per_artist,
+                category = SettingsCategory.LIBRARY,
+                subscreenRoute = Screen.SettingsCategory.createRoute("library"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("tracks", "artist", "filter", "songs")
             ),
             SettingSpec(
                 id = "library_album_art_cache",
@@ -325,7 +346,10 @@ object SettingsRegistry {
                 category = SettingsCategory.LIBRARY,
                 subscreenRoute = Screen.Accounts.createRoute(),
                 type = SettingType.NAVIGABLE_CARD,
-                keywordsStatic = listOf("accounts", "navidrome", "jellyfin", "subsonic", "streaming", "server", "login")
+                keywordsStatic = listOf(
+                    "accounts", "navidrome", "jellyfin", "subsonic", "streaming",
+                    "server", "login", "favorites", "favourites", "sync"
+                )
             ),
             SettingSpec(
                 id = "cloud_downloads",
@@ -378,6 +402,28 @@ object SettingsRegistry {
                 subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf("amoled", "black", "oled", "true black", "dark", "theme", "preset")
+            ),
+            SettingSpec(
+                id = "appearance_system_font",
+                itemKey = "item_appearance_system_font",
+                titleRes = R.string.setcat_system_font_title,
+                subtitleRes = R.string.setcat_system_font_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
+                type = SettingType.SWITCH,
+                keywordsStatic = listOf("font", "typeface", "text", "system"),
+                getValue = { it.interfaceAppearance.useSystemFont },
+                onToggle = { viewModel, checked -> viewModel.setUseSystemFont(checked) }
+            ),
+            SettingSpec(
+                id = "appearance_interface_scale",
+                itemKey = "item_appearance_interface_scale",
+                titleRes = R.string.setcat_interface_scale_title,
+                subtitleRes = R.string.setcat_interface_scale_subtitle,
+                category = SettingsCategory.APPEARANCE,
+                subscreenRoute = Screen.SettingsCategory.createRoute("appearance"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf("scale", "size", "display", "zoom")
             ),
             SettingSpec(
                 id = "appearance_global_now_playing_theme",
@@ -856,7 +902,8 @@ object SettingsRegistry {
                 type = SettingType.NAVIGABLE_CARD,
                 keywordsStatic = listOf(
                     "audio", "output", "direct", "hifi", "high fidelity",
-                    "pcm", "float", "quality", "lossless"
+                    "pcm", "float", "quality", "lossless", "bit-perfect",
+                    "bitperfect", "usb", "dac"
                 )
             ),
             SettingSpec(
@@ -949,6 +996,18 @@ object SettingsRegistry {
                 keywordsStatic = listOf(
                     "previous", "previous song", "previous track", "rewind", "back", "skip back",
                     "restart", "replay", "button"
+                )
+            ),
+            SettingSpec(
+                id = "behavior_swipe_to_queue",
+                itemKey = "item_behavior_swipe_to_queue",
+                titleRes = R.string.setcat_swipe_to_queue_title,
+                subtitleRes = R.string.setcat_swipe_to_queue_description,
+                category = SettingsCategory.BEHAVIOR,
+                subscreenRoute = Screen.SettingsCategory.createRoute("behavior"),
+                type = SettingType.NAVIGABLE_CARD,
+                keywordsStatic = listOf(
+                    "swipe", "gesture", "queue", "add to queue", "play next", "song list", "playlist"
                 )
             ),
             SettingSpec(

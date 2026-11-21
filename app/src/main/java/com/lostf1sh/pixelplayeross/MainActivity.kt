@@ -24,10 +24,13 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -75,10 +78,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
@@ -117,6 +122,7 @@ import com.lostf1sh.pixelplayeross.data.preferences.sanitizeNavBarCornerRadius
 import com.lostf1sh.pixelplayeross.data.preferences.SidebarShortcutKeys
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreferencesRepository
 import com.lostf1sh.pixelplayeross.data.preferences.ThemePreset
+import com.lostf1sh.pixelplayeross.data.preferences.InterfaceAppearance
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.service.MusicService
 import com.lostf1sh.pixelplayeross.data.worker.SyncManager
@@ -321,6 +327,7 @@ class MainActivity : ComponentActivity() {
                 .collectAsStateWithLifecycle(initialValue = PlayerUiConfig())
             val libraryBackgroundColor by themePreferencesRepository.libraryBackgroundColorFlow
                 .collectAsStateWithLifecycle(initialValue = null)
+            val interfaceAppearance by themePreferencesRepository.interfaceAppearanceFlow.collectAsStateWithLifecycle(initialValue = InterfaceAppearance())
             val useDarkTheme = when (appThemeMode) {
                 AppThemeMode.DARK -> true
                 AppThemeMode.LIGHT -> false
@@ -409,6 +416,7 @@ class MainActivity : ComponentActivity() {
                 appBackground = appBackground,
                 playerUiConfig = playerUiConfig,
                 libraryBackgroundColor = libraryBackgroundColor?.let { Color(it) }
+                interfaceAppearance = interfaceAppearance
             ) {
                 var contentVisible by remember { mutableStateOf(false) }
                 val contentAlpha by animateFloatAsState(
@@ -719,7 +727,7 @@ class MainActivity : ComponentActivity() {
     ) = traceSection("MainActivity.MainUI") {
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentRoute = navBackStackEntry?.destination?.route
-        var isSearchBarActive by remember { mutableStateOf(false) }
+        var isSearchBarActive by rememberSaveable { mutableStateOf(false) }
         val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
         val useNavigationRail =
             windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
@@ -815,11 +823,7 @@ class MainActivity : ComponentActivity() {
         val navBarHeight = resolveNavBarSurfaceHeight(navBarStyle, systemNavBarInset, navBarCompactMode)
         val navBarOccupiedHeight by remember(systemNavBarInset, navBarCompactMode, useNavigationRail) {
             derivedStateOf {
-                if (useNavigationRail) {
-                    0.dp
-                } else {
-                    resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
-                }
+                resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode, useNavigationRail)
             }
         }
         val navBarVisibilityProgressState = animateFloatAsState(
@@ -834,9 +838,11 @@ class MainActivity : ComponentActivity() {
         val visibleNavBarOccupiedHeight by remember(navBarOccupiedHeight, navBarVisibilityProgress) {
             derivedStateOf { navBarOccupiedHeight * navBarVisibilityProgress }
         }
-        val miniPlayerBottomMargin by remember(systemNavBarInset, visibleNavBarOccupiedHeight) {
+        val miniPlayerBottomMargin by remember(systemNavBarInset, visibleNavBarOccupiedHeight, useNavigationRail) {
             derivedStateOf {
-                if (visibleNavBarOccupiedHeight > systemNavBarInset) {
+                if (useNavigationRail) {
+                    systemNavBarInset
+                } else if (visibleNavBarOccupiedHeight > systemNavBarInset) {
                     visibleNavBarOccupiedHeight
                 } else {
                     systemNavBarInset
@@ -848,9 +854,9 @@ class MainActivity : ComponentActivity() {
                 !shouldHideNavigationBar || navBarVisibilityProgress > 0.01f
             }
         }
-        val isNavBarEffectivelyHidden by remember(shouldHideNavigationBar, navBarVisibilityProgress) {
+        val isNavBarEffectivelyHidden by remember(shouldHideNavigationBar, navBarVisibilityProgress, useNavigationRail) {
             derivedStateOf {
-                shouldHideNavigationBar && navBarVisibilityProgress <= 0.01f
+                useNavigationRail || (shouldHideNavigationBar && navBarVisibilityProgress <= 0.01f)
             }
         }
 
@@ -878,7 +884,15 @@ class MainActivity : ComponentActivity() {
                     scope.launch { userPreferencesRepository.setSidebarShortcuts(shortcuts) }
                 },
                 onDestinationSelected = { destination ->
-                    scope.launch { drawerState.close() }
+                    scope.launch {
+                        drawerState.animateTo(
+                            targetValue = DrawerValue.Closed,
+                            anim = spring(
+                                dampingRatio = Spring.DampingRatioNoBouncy,
+                                stiffness = Spring.StiffnessMediumLow
+                            )
+                        )
+                    }
                     when (destination) {
                         DrawerDestination.Home -> navController.navigateSafely(Screen.Home.route) {
                             popUpTo(Screen.Home.route) { inclusive = true }
@@ -890,31 +904,244 @@ class MainActivity : ComponentActivity() {
                     }
                 }
         ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                if (useNavigationRail) {
-                    AnimatedVisibility(
-                        visible = !shouldHideNavigationBar,
-                        enter = expandHorizontally() + fadeIn(),
-                        exit = shrinkHorizontally() + fadeOut()
-                    ) {
-                        val onSearchIconDoubleTap = remember(playerViewModel) {
-                            { playerViewModel.onSearchNavIconDoubleTapped() }
+            val railVisible = useNavigationRail && !shouldHideNavigationBar
+            val animatedRailContentCornerRadius by animateDpAsState(
+                targetValue = if (railVisible) navBarCornerRadius.dp else 0.dp,
+                animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+                label = "ScaffoldCornerRadiusForRail"
+            )
+            val animatedRailOffset by animateDpAsState(
+                targetValue = if (railVisible) 80.dp else 0.dp,
+                animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+                label = "MiniPlayerRailOffset"
+            )
+
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val density = LocalDensity.current
+                val containerHeight = this.maxHeight
+                val containerWidth = this.maxWidth
+                val screenHeightPx = remember(containerHeight, density) {
+                    with(density) { containerHeight.toPx() }
+                }
+
+                val showPlayerContentInitially by remember {
+                    playerViewModel.stablePlayerState
+                        .map { it.currentSong?.id != null }
+                        .distinctUntilChanged()
+                }.collectAsStateWithLifecycle(initialValue = false)
+                // The recap story is full screen; its own Play button closes it so the
+                // player shows up again.
+                val routesWithHiddenMiniPlayer = remember {
+                    setOf(Screen.NavBarCrRad.route, Screen.Recap.route)
+                }
+                val shouldHideMiniPlayer by remember(currentRoute) {
+                    derivedStateOf { currentRoute in routesWithHiddenMiniPlayer }
+                }
+
+                val miniPlayerH = with(density) { MiniPlayerHeight.toPx() }
+                val totalSheetHeightWhenContentCollapsedPx = if (showPlayerContentInitially && !shouldHideMiniPlayer) miniPlayerH else 0f
+
+                val bottomMargin = miniPlayerBottomMargin
+
+                val spacerPx = with(density) { MiniPlayerBottomSpacer.toPx() }
+                val bottomMarginPx = with(density) { bottomMargin.toPx() }
+                val sheetCollapsedTargetY = calculatePlayerSheetCollapsedTargetY(
+                    containerHeightPx = screenHeightPx,
+                    collapsedContentHeightPx = totalSheetHeightWhenContentCollapsedPx,
+                    bottomMarginPx = bottomMarginPx,
+                    bottomSpacerPx = spacerPx
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceContainer)
+                ) {
+                    if (useNavigationRail) {
+                        AnimatedVisibility(
+                            visible = !shouldHideNavigationBar,
+                            enter = expandHorizontally(
+                                animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing)
+                            ) + fadeIn(animationSpec = tween(180)),
+                            exit = shrinkHorizontally(
+                                animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing)
+                            ) + fadeOut(animationSpec = tween(140))
+                        ) {
+                            val onSearchIconDoubleTap = remember(playerViewModel) {
+                                { playerViewModel.onSearchNavIconDoubleTapped() }
+                            }
+                            PlayerNavigationRail(
+                                navController = navController,
+                                navItems = MainNavItems,
+                                currentRoute = currentRoute,
+                                onSearchIconDoubleTap = onSearchIconDoubleTap
+                            )
                         }
-                        PlayerNavigationRail(
-                            navController = navController,
-                            navItems = MainNavItems,
-                            currentRoute = currentRoute,
-                            onSearchIconDoubleTap = onSearchIconDoubleTap
+                    }
+
+                    Scaffold(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                            .then(
+                                if (useNavigationRail) {
+                                    Modifier.clip(
+                                        RoundedCornerShape(
+                                            topStart = animatedRailContentCornerRadius,
+                                            bottomStart = animatedRailContentCornerRadius
+                                        )
+                                    )
+                                } else {
+                                    Modifier
+                                }
+                            ),
+                bottomBar = {
+                    // Reserves the bar's height for innerPadding; the bar itself is drawn above
+                    // the player sheet further down.
+                    if (!useNavigationRail && shouldRenderNavigationBar) {
+                        Spacer(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(navBarOccupiedHeight)
                         )
                     }
                 }
+                ) { innerPadding ->
+                    Box(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        AppNavigation(
+                            playerViewModel = playerViewModel,
+                            navController = navController,
+                            paddingValues = innerPadding,
+                            userPreferencesRepository = userPreferencesRepository,
+                            onSearchBarActiveChange = { isSearchBarActive = it },
+                            onOpenSidebar = {
+                                scope.launch {
+                                    drawerState.animateTo(
+                                        targetValue = DrawerValue.Open,
+                                        anim = spring(
+                                            dampingRatio = Spring.DampingRatioNoBouncy,
+                                            stiffness = Spring.StiffnessMediumLow
+                                        )
+                                    )
+                                }
+                            }
+                        )
 
-                Scaffold(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                bottomBar = {
-                    if (!useNavigationRail && shouldRenderNavigationBar) {
+                        val dismissUndoBarSlice by remember {
+                            playerViewModel.playerUiState
+                                .map { state ->
+                                    DismissUndoBarSlice(
+                                        isVisible = state.showDismissUndoBar,
+                                        durationMillis = state.undoBarVisibleDuration
+                                    )
+                                }
+                                .distinctUntilChanged()
+                        }.collectAsStateWithLifecycle(initialValue = DismissUndoBarSlice())
+                        val onUndoDismissPlaylist = remember(playerViewModel) {
+                            { playerViewModel.undoDismissPlaylist() }
+                        }
+                        val onCloseDismissUndoBar = remember(playerViewModel) {
+                            { playerViewModel.hideDismissUndoBar() }
+                        }
+
+                        androidx.compose.animation.AnimatedVisibility(
+                            visible = dismissUndoBarSlice.isVisible,
+                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = innerPadding.calculateBottomPadding() + MiniPlayerBottomSpacer)
+                                .padding(horizontal = horizontalPadding)
+                        ) {
+                            DismissUndoBar(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(MiniPlayerHeight)
+                                    .padding(horizontal = 14.dp),
+                                onUndo = onUndoDismissPlaylist,
+                                onClose = onCloseDismissUndoBar,
+                                durationMillis = dismissUndoBarSlice.durationMillis
+                            )
+                        }
+
+                        SmartMixHost(
+                            playerViewModel = playerViewModel,
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .padding(bottom = innerPadding.calculateBottomPadding() + MiniPlayerHeight)
+                                .padding(horizontal = horizontalPadding)
+                        )
+                    }
+                }
+                }
+
+                // Overlay the dim scrim and player sheet above both the navigation rail and main
+                // scaffold so expanding Now Playing covers the full window smoothly without
+                // unmounting the rail or shifting layout width mid-transition.
+                val isExpandedOrExpanding by remember {
+                    derivedStateOf {
+                        playerViewModel.playerContentExpansionFraction.value > 0.01f
+                    }
+                }
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = isExpandedOrExpanding,
+                    enter = fadeIn(animationSpec = tween(durationMillis = 350)),
+                    exit = fadeOut(animationSpec = tween(durationMillis = 350)),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainerLowest.copy(
+                                    alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.35f else 0.6f
+                                )
+                            )
+                            .pointerInput(Unit) {
+                                detectTapGestures {
+                                    playerViewModel.collapsePlayerSheet()
+                                }
+                            }
+                    )
+                }
+
+                val miniPlayerWidth = 460.dp
+                val miniPlayerPaddingStart: Dp
+                val miniPlayerPaddingEnd: Dp
+                if (useNavigationRail) {
+                    val contentWidth = (containerWidth - animatedRailOffset).coerceAtLeast(0.dp)
+                    val centeredPadding = maxOf(12.dp, (contentWidth - miniPlayerWidth) / 2)
+                    miniPlayerPaddingStart = animatedRailOffset + centeredPadding
+                    miniPlayerPaddingEnd = centeredPadding
+                } else {
+                    miniPlayerPaddingStart = horizontalPadding
+                    miniPlayerPaddingEnd = horizontalPadding
+                }
+
+                UnifiedPlayerSheetV2(
+                    playerViewModel = playerViewModel,
+                    sheetCollapsedTargetY = sheetCollapsedTargetY,
+                    collapsedStateHorizontalPadding = miniPlayerPaddingStart,
+                    collapsedStateHorizontalPaddingStart = miniPlayerPaddingStart,
+                    collapsedStateHorizontalPaddingEnd = miniPlayerPaddingEnd,
+                    hideMiniPlayer = shouldHideMiniPlayer,
+                    containerHeight = containerHeight,
+                    containerWidth = containerWidth,
+                    navController = navController,
+                    isNavBarHidden = isNavBarEffectivelyHidden
+                )
+
+                // Phones draw the bottom bar here, above the player sheet. The sheet's container
+                // spans the strip below the mini player, so in the Scaffold's bottomBar slot the
+                // navigation items sat under it and never received taps (#272).
+                if (!useNavigationRail && shouldRenderNavigationBar) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                    ) {
                         val currentSongId by remember {
                             playerViewModel.stablePlayerState
                                 .map { it.currentSong?.id }
@@ -936,7 +1163,6 @@ class MainActivity : ComponentActivity() {
                         )
 
                         var componentHeightPx by remember { mutableStateOf(0) }
-                        val density = LocalDensity.current
                         val shadowOverflowPx = remember(navBarElevation, density) {
                             with(density) { (navBarElevation * 8).toPx() }
                         }
@@ -1013,140 +1239,8 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                ) { innerPadding ->
-                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-                        val density = LocalDensity.current
-                        val containerHeight = this.maxHeight
-                        val screenHeightPx = remember(containerHeight, density) {
-                            with(density) { containerHeight.toPx() }
-                        }
-
-                        val showPlayerContentInitially by remember {
-                            playerViewModel.stablePlayerState
-                                .map { it.currentSong?.id != null }
-                                .distinctUntilChanged()
-                        }.collectAsStateWithLifecycle(initialValue = false)
-                        // The recap story is full screen; its own Play button closes it so the
-                        // player shows up again.
-                        val routesWithHiddenMiniPlayer = remember {
-                            setOf(Screen.NavBarCrRad.route, Screen.Recap.route)
-                        }
-                        val shouldHideMiniPlayer by remember(currentRoute) {
-                            derivedStateOf { currentRoute in routesWithHiddenMiniPlayer }
-                        }
-
-                        val miniPlayerH = with(density) { MiniPlayerHeight.toPx() }
-                        val totalSheetHeightWhenContentCollapsedPx = if (showPlayerContentInitially && !shouldHideMiniPlayer) miniPlayerH else 0f
-
-                        val bottomMargin = miniPlayerBottomMargin
-
-                        val spacerPx = with(density) { MiniPlayerBottomSpacer.toPx() }
-                        val bottomMarginPx = with(density) { bottomMargin.toPx() }
-                        val sheetCollapsedTargetY = calculatePlayerSheetCollapsedTargetY(
-                            containerHeightPx = screenHeightPx,
-                            collapsedContentHeightPx = totalSheetHeightWhenContentCollapsedPx,
-                            bottomMarginPx = bottomMarginPx,
-                            bottomSpacerPx = spacerPx
-                        )
-
-                        Box(
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            AppNavigation(
-                                playerViewModel = playerViewModel,
-                                navController = navController,
-                                paddingValues = innerPadding,
-                                userPreferencesRepository = userPreferencesRepository,
-                                onSearchBarActiveChange = { isSearchBarActive = it },
-                                onOpenSidebar = { scope.launch { drawerState.open() } }
-                            )
-                        }
-
-                        val isExpandedOrExpanding by remember {
-                            derivedStateOf {
-                                playerViewModel.playerContentExpansionFraction.value > 0.01f
-                            }
-                        }
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = isExpandedOrExpanding,
-                            enter = fadeIn(animationSpec = tween(durationMillis = 350)),
-                            exit = fadeOut(animationSpec = tween(durationMillis = 350)),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        MaterialTheme.colorScheme.surfaceContainerLowest.copy(
-                                            alpha = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) 0.35f else 0.6f
-                                        )
-                                    )
-                                    .pointerInput(Unit) {
-                                        detectTapGestures {
-                                            playerViewModel.collapsePlayerSheet()
-                                        }
-                                    }
-                            )
-                        }
-
-                        UnifiedPlayerSheetV2(
-                            playerViewModel = playerViewModel,
-                            sheetCollapsedTargetY = sheetCollapsedTargetY,
-                            collapsedStateHorizontalPadding = horizontalPadding,
-                            hideMiniPlayer = shouldHideMiniPlayer,
-                            containerHeight = containerHeight,
-                            navController = navController,
-                            isNavBarHidden = isNavBarEffectivelyHidden
-                        )
-
-                        val dismissUndoBarSlice by remember {
-                            playerViewModel.playerUiState
-                                .map { state ->
-                                    DismissUndoBarSlice(
-                                        isVisible = state.showDismissUndoBar,
-                                        durationMillis = state.undoBarVisibleDuration
-                                    )
-                                }
-                                .distinctUntilChanged()
-                        }.collectAsStateWithLifecycle(initialValue = DismissUndoBarSlice())
-                        val onUndoDismissPlaylist = remember(playerViewModel) {
-                            { playerViewModel.undoDismissPlaylist() }
-                        }
-                        val onCloseDismissUndoBar = remember(playerViewModel) {
-                            { playerViewModel.hideDismissUndoBar() }
-                        }
-
-                        androidx.compose.animation.AnimatedVisibility(
-                            visible = dismissUndoBarSlice.isVisible,
-                            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                            exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = innerPadding.calculateBottomPadding() + MiniPlayerBottomSpacer)
-                                .padding(horizontal = horizontalPadding)
-                        ) {
-                            DismissUndoBar(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(MiniPlayerHeight)
-                                    .padding(horizontal = 14.dp),
-                                onUndo = onUndoDismissPlaylist,
-                                onClose = onCloseDismissUndoBar,
-                                durationMillis = dismissUndoBarSlice.durationMillis
-                            )
-                        }
-
-                        SmartMixHost(
-                            playerViewModel = playerViewModel,
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = innerPadding.calculateBottomPadding() + MiniPlayerHeight)
-                                .padding(horizontal = horizontalPadding)
-                        )
-                    }
-                }
             }
-            }
+        }
         }
     }
 

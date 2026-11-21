@@ -91,6 +91,8 @@ class ThemePreferencesRepository @Inject constructor(
                 ?.takeIf { it in PlayerControlsShape.values }
                 ?: PlayerControlsShape.DEFAULT
         )
+        val USE_SYSTEM_FONT = booleanPreferencesKey("use_system_font")
+        val INTERFACE_SCALE = intPreferencesKey("interface_scale_percent")
     }
 
     val appThemeModeFlow: Flow<String> = dataStore.data.map { preferences ->
@@ -107,6 +109,13 @@ class ThemePreferencesRepository @Inject constructor(
 
     val themePresetFlow: Flow<String> = dataStore.data.map { preferences ->
         ThemePreset.sanitize(preferences[Keys.THEME_PRESET])
+    }
+
+    val interfaceAppearanceFlow: Flow<InterfaceAppearance> = dataStore.data.map { preferences ->
+        InterfaceAppearance(
+            useSystemFont = preferences[Keys.USE_SYSTEM_FONT] ?: false,
+            scalePercent = InterfaceAppearance.sanitizeScale(preferences[Keys.INTERFACE_SCALE])
+        )
     }
 
     val albumArtPaletteStyleFlow: Flow<AlbumArtPaletteStyle> = dataStore.data.map { preferences ->
@@ -215,6 +224,13 @@ class ThemePreferencesRepository @Inject constructor(
             }
         }
 
+    suspend fun setUseSystemFont(enabled: Boolean) = dataStore.edit { preferences ->
+        preferences[Keys.USE_SYSTEM_FONT] = enabled
+    }
+
+    suspend fun setInterfaceScale(scalePercent: Int) = dataStore.edit { preferences ->
+        preferences[Keys.INTERFACE_SCALE] = InterfaceAppearance.sanitizeScale(scalePercent)
+    }
 
     suspend fun initializeAppThemeMode(themeMode: String) =
         dataStore.edit { preferences ->
@@ -239,6 +255,18 @@ class ThemePreferencesRepository @Inject constructor(
     ) = dataStore.edit { preferences ->
         preferences[Keys.ALBUM_ART_PALETTE_STYLE] = style.storageKey
         preferences[Keys.ALBUM_ART_COLOR_ACCURACY] = AlbumArtColorAccuracy.clamp(accuracyLevel)
+    }
+}
+
+data class InterfaceAppearance(
+    val useSystemFont: Boolean = false,
+    val scalePercent: Int = DEFAULT_SCALE
+) {
+    companion object {
+        const val DEFAULT_SCALE = 100
+        val scaleOptions = listOf(90, DEFAULT_SCALE, 110, 120)
+
+        fun sanitizeScale(value: Int?): Int = scaleOptions.firstOrNull { it == value } ?: DEFAULT_SCALE
     }
 }
 

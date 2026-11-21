@@ -2,6 +2,8 @@
 
 package com.lostf1sh.pixelplayeross.presentation.screens
 
+import com.lostf1sh.pixelplayeross.ui.theme.withInterfaceFont
+
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafely
 import com.lostf1sh.pixelplayeross.presentation.navigation.navigateSafelyReplacing
 
@@ -78,6 +80,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -215,7 +219,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -247,7 +250,7 @@ import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.lostf1sh.pixelplayeross.presentation.components.AutoScrollingTextOnDemand
+import com.lostf1sh.pixelplayeross.presentation.components.albumTitleMarquee
 import com.lostf1sh.pixelplayeross.presentation.screens.CreatePlaylistDialog
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistBottomSheet
 import com.lostf1sh.pixelplayeross.presentation.components.PlaylistContainer
@@ -790,8 +793,10 @@ fun LibraryScreen(
 
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
-    val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
-    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode)
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val useNavigationRail = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode, useNavigationRail)
+    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode, useNavigationRail)
 
     val dm = LocalPixelPlayerDarkTheme.current
 
@@ -982,6 +987,8 @@ fun LibraryScreen(
                 playerViewModel.playerUiState.value.toLibraryScreenProjection()
             }
         )
+        val configuredSecondarySongSort by playerViewModel.secondarySongSortOption.collectAsStateWithLifecycle()
+        val secondarySongSort = playerUiState.currentSongSortOption.resolveSecondarySongSort(configuredSecondarySongSort)
         val isLibraryContentEmpty by remember(playerViewModel) {
             combine(
                 playerViewModel.songCountFlow,
@@ -1139,13 +1146,23 @@ fun LibraryScreen(
                                     SelectionActionRow(
                                         selectedCount = selectedArtists.size,
                                         onSelectAll = {
-                                            multiSelectionState.clearSelection()
-                                            showMultiSelectionSheet = false
-                                            selectedArtists = appendDistinctSelection(
-                                                current = selectedArtists,
-                                                candidates = playerViewModel.artistsFlow.value,
-                                                keyOf = Artist::id
-                                            ).toImmutableList()
+                                            scope.launch {
+                                                runCatching { playerViewModel.getArtistsForCurrentLibrarySelection() }
+                                                    .onSuccess { artists ->
+                                                        if (latestSelectedArtists.isNotEmpty()) {
+                                                            multiSelectionState.clearSelection()
+                                                            showMultiSelectionSheet = false
+                                                            selectedArtists = appendDistinctSelection(
+                                                                current = latestSelectedArtists,
+                                                                candidates = artists,
+                                                                keyOf = Artist::id
+                                                            ).toImmutableList()
+                                                        }
+                                                    }.onFailure { error ->
+                                                        if (error is CancellationException) throw error
+                                                        Timber.tag("LibrarySelection").e(error, "Unable to select all artists")
+                                                    }
+                                            }
                                         },
                                         onDeselect = {
                                             selectedArtists = persistentListOf()
@@ -1260,6 +1277,12 @@ fun LibraryScreen(
                                 ?: sanitizedSortOptions.first()
 
 
+                            val isSongsTab = currentTabId == LibraryTabId.SONGS
+                            val songSecondaryOptions = remember(selectedOptionForSheet.methodKey) {
+                                SortOption.SONG_SECONDARY.filterNot {
+                                    it.methodKey == selectedOptionForSheet.methodKey
+                                }.toImmutableList()
+                            }
                             val isAlbumTab = currentTabId == LibraryTabId.ALBUMS
                             val isFoldersTab = currentTabId == LibraryTabId.FOLDERS
                             // Playlist view opens folders as playlists, which sort their own songs.
@@ -1279,18 +1302,35 @@ fun LibraryScreen(
                                 onDirectionToggle = { option ->
                                     onSortOptionChanged(option)
                                 },
-                                secondaryOptions = if (showsFolderSongs) folderSongSortOptions else persistentListOf(),
-                                secondarySelectedOption = playerUiState.currentFolderSongSortOption,
+                                secondaryOptions = when {
+                                    showsFolderSongs -> folderSongSortOptions
+                                    isSongsTab && secondarySongSort != null -> songSecondaryOptions
+                                    else -> persistentListOf()
+                                },
+                                secondarySelectedOption = if (isSongsTab) secondarySongSort else playerUiState.currentFolderSongSortOption,
                                 onSecondaryOptionSelected = { option ->
-                                    playerViewModel.sortFolderSongs(option)
+                                    if (isSongsTab) playerViewModel.setSecondarySongSortOption(option)
+                                    else playerViewModel.sortFolderSongs(option)
                                     playerViewModel.hideSortingSheet()
                                 },
                                 onSecondaryDirectionToggle = { option ->
-                                    playerViewModel.sortFolderSongs(option)
+                                    if (isSongsTab) playerViewModel.setSecondarySongSortOption(option)
+                                    else playerViewModel.sortFolderSongs(option)
                                 },
-                                primaryTargetLabel = stringResource(R.string.library_tab_folders),
-                                secondaryTargetLabel = stringResource(R.string.library_tab_songs),
-                                initiallyShowSecondary = playerUiState.currentFolder?.songs?.isNotEmpty() == true,
+                                primaryTargetLabel = stringResource(
+                                    if (isSongsTab) R.string.sort_primary else R.string.library_tab_folders
+                                ),
+                                secondaryTargetLabel = stringResource(
+                                    if (isSongsTab) R.string.sort_secondary else R.string.library_tab_songs
+                                ),
+                                initiallyShowSecondary = showsFolderSongs &&
+                                    playerUiState.currentFolder?.songs?.isNotEmpty() == true,
+                                advancedSortingEnabled = if (isSongsTab) secondarySongSort != null else null,
+                                onAdvancedSortingChange = { enabled ->
+                                    playerViewModel.setSecondarySongSortOption(
+                                        if (enabled) songSecondaryOptions.firstOrNull() else null
+                                    )
+                                },
                                 showViewToggle = isFoldersTab,
                                 viewSectionTitle = stringResource(R.string.presentation_batch_d_view_section_view),
                                 viewToggleLabel = stringResource(R.string.presentation_batch_d_playlist_view),
@@ -1527,6 +1567,7 @@ fun LibraryScreen(
                                             onLocateCurrentSongVisibilityChanged = { songsShowLocateButton = it },
                                             onRegisterLocateCurrentSongAction = { songsLocateAction = it },
                                             sortOption = playerUiState.currentSongSortOption,
+                                            secondarySortOption = secondarySongSort,
                                             storageFilter = playerUiState.currentStorageFilter,
                                             hasCurrentSong = hasCurrentSong
                                         )
@@ -1545,6 +1586,7 @@ fun LibraryScreen(
                                         }
                                         LibraryAlbumsTab(
                                             albums = albumsLazyPagingItems,
+                                            isActivePage = pagerState.settledPage == page,
                                             isLoading = isLoading,
                                             playerViewModel = playerViewModel,
                                             bottomBarHeight = bottomBarHeightDp,
@@ -1749,23 +1791,23 @@ fun LibraryScreen(
                     LibrarySyncOverlay(syncManager = syncManager)
                 }
             }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .align(Alignment.BottomCenter)
-                    .height(bottomGradientHeight)
-                    .background(
-                        brush = Brush.verticalGradient(
-                            colorStops = arrayOf(
-                                0.0f to Color.Transparent,
-                                0.2f to Color.Transparent,
-                                0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
-                                1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
+            if (bottomGradientHeight > 0.dp) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .height(bottomGradientHeight)
+                        .background(
+                            brush = Brush.verticalGradient(
+                                colorStops = arrayOf(
+                                    0.0f to Color.Transparent,
+                                    0.2f to Color.Transparent,
+                                    0.8f to MaterialTheme.colorScheme.surfaceContainerLowest,
+                                    1.0f to MaterialTheme.colorScheme.surfaceContainerLowest
+                                )
                             )
                         )
-                    )
-            ) {
-
+                )
             }
         }
     }
@@ -2437,7 +2479,7 @@ private fun LibraryNavigationCompactTitle(
                     trim = LineHeightStyle.Trim.None
                 )
             )
-        }
+        }.withInterfaceFont()
 
         val idealTextWidth = remember(displayedTitle, baseTextStyle) {
             with(density) {
@@ -2546,7 +2588,7 @@ private fun LibraryNavigationCompactTitle(
                     trim = LineHeightStyle.Trim.None
                 )
             )
-        }
+        }.withInterfaceFont()
 
         Surface(
             color = MaterialTheme.colorScheme.primaryContainer,
@@ -3416,7 +3458,8 @@ fun AlbumGridItemRedesigned(
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
     onSelectionToggle: () -> Unit = {},
-    customShape: androidx.compose.ui.graphics.Shape? = null
+    customShape: androidx.compose.ui.graphics.Shape? = null,
+    animateTitle: Boolean = false,
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayerDarkTheme.current
@@ -3533,7 +3576,7 @@ fun AlbumGridItemRedesigned(
                             model = album.albumArtUriString,
                             contentDescription = stringResource(R.string.cd_album_art_for_title, album.title),
                             contentScale = ContentScale.Crop,
-                            targetSize = Size(256, 256),
+                            targetSize = Size(512, 512),
                             modifier = Modifier
                                 .aspectRatio(3f / 2f)
                                 .fillMaxSize(),
@@ -3574,7 +3617,9 @@ fun AlbumGridItemRedesigned(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = onGradientColor,
+                            modifier = Modifier.albumTitleMarquee(animateTitle),
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(album.artist, style = MaterialTheme.typography.bodySmall, color = onGradientColor.copy(alpha = 0.85f), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -3762,7 +3807,8 @@ fun AlbumListItem(
     selectionIndex: Int? = null,
     onLongPress: () -> Unit = {},
     onSelectionToggle: () -> Unit = {},
-    customShape: androidx.compose.ui.graphics.Shape? = null
+    customShape: androidx.compose.ui.graphics.Shape? = null,
+    animateTitle: Boolean = false,
 ) {
     val albumColorSchemePair by albumColorSchemePairFlow.collectAsStateWithLifecycle()
     val systemIsDark = LocalPixelPlayerDarkTheme.current
@@ -3870,7 +3916,7 @@ fun AlbumListItem(
                             model = album.albumArtUriString,
                             contentDescription = stringResource(R.string.cd_album_art_for_title, album.title),
                             contentScale = ContentScale.Crop,
-                            targetSize = Size(256, 256),
+                            targetSize = Size(512, 512),
                             modifier = Modifier.fillMaxSize(),
                             onState = { state ->
                                 isLoadingImage = state is AsyncImagePainter.State.Loading
@@ -3912,9 +3958,11 @@ fun AlbumListItem(
 
                             Text(
                                 album.title,
-                                style = variableTextStyle.copy(fontSize = 22.sp),
+                                style = variableTextStyle.copy(fontSize = 22.sp).withInterfaceFont(),
                                 color = onGradientColor,
+                                modifier = Modifier.albumTitleMarquee(animateTitle),
                                 maxLines = 1,
+                                softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Spacer(

@@ -27,6 +27,7 @@ import com.lostf1sh.pixelplayeross.data.model.ArtistRef
 import com.lostf1sh.pixelplayeross.data.media.AudioMetadataReader
 import com.lostf1sh.pixelplayeross.data.media.normalizeArtistMetadataValues
 import com.lostf1sh.pixelplayeross.data.model.Song
+import com.lostf1sh.pixelplayeross.data.preferences.LocalAlbumGroupingSettings
 import com.lostf1sh.pixelplayeross.data.preferences.UserPreferencesRepository
 import com.lostf1sh.pixelplayeross.data.repository.LyricsRepository
 import com.lostf1sh.pixelplayeross.data.repository.ArtistImageRepository
@@ -53,7 +54,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import timber.log.Timber
@@ -87,6 +90,22 @@ internal fun shouldReadEmbeddedMetadata(
         isDefaultMetadata(rawArtist) ||
         isDefaultMetadata(rawAlbum)
 }
+
+/**
+ * Embedded MusicBrainz tags win; otherwise IDs stored earlier (a previous scan or a manual
+ * lookup) survive a rescan that did not read tags. The three IDs move together so a recording
+ * is never paired with another match's release or artist.
+ */
+internal fun SongEntity.withMusicBrainzIdsFallback(stored: SongEntity): SongEntity =
+    if (mbRecordingId != null) {
+        this
+    } else {
+        copy(
+            mbRecordingId = stored.mbRecordingId,
+            mbReleaseId = stored.mbReleaseId,
+            mbArtistId = stored.mbArtistId
+        )
+    }
 
 private fun isDefaultMetadata(value: String): Boolean {
     val lower = value.trim().lowercase(Locale.ROOT)
@@ -185,6 +204,7 @@ constructor(
                     val extractArtistsFromTitle = userPreferencesRepository.extractArtistsFromTitleFlow.first()
                     val groupByAlbumArtist =
                             userPreferencesRepository.groupByAlbumArtistFlow.first()
+                    val albumGrouping = userPreferencesRepository.getLocalAlbumGroupingSettings()
                     val rescanRequired =
                             userPreferencesRepository.artistSettingsRescanRequiredFlow.first()
                     val directoryRulesVersion =
@@ -205,6 +225,8 @@ constructor(
                     val metadataCharsetRepairPending =
                         userPreferencesRepository.getMetadataCharsetRepairVersion() <
                             CURRENT_METADATA_CHARSET_REPAIR_VERSION
+                    val embeddedTagScanRequired =
+                        userPreferencesRepository.getEmbeddedTagScanVersion() < CURRENT_EMBEDDED_TAG_SCAN_VERSION
 
                     minSongDurationMs = userPreferencesRepository.getMinSongDuration()
                     minTracksPerAlbum = userPreferencesRepository.minTracksPerAlbumFlow.first()
@@ -252,7 +274,9 @@ constructor(
                         requestedRunMaintenance = requestedRunMaintenance,
                         rescanRequired = rescanRequired,
                         directoryRulesChanged = directoryRulesChanged,
-                        isFreshInstall = isFreshInstall
+                        isFreshInstall = isFreshInstall,
+                        embeddedTagScanRequired = embeddedTagScanRequired,
+                        albumGroupingChanged = albumGrouping.requiresReindex
                     )
 
                     // Newly visible files can retain timestamps older than the last sync.
@@ -289,6 +313,9 @@ constructor(
                         syncPlan.forceProcessAll,
                         syncPlan.resetExistingLocalData,
                         metadataCharsetRepairPending,
+                        embeddedTagScanRequired,
+                        albumGrouping.requiresReindex && !syncPlan.forceMetadata &&
+                            !metadataCharsetRepairPending && !embeddedTagScanRequired,
                         progressBatchSize
                     ) { current, total, phaseOrdinal ->
                         setProgress(
@@ -303,9 +330,7 @@ constructor(
                     Timber.tag(TAG)
                         .i("Fetched ${songsToInsert.size} new/modified songs from MediaStore.")
 
-                    val anySongsFetched = songsToInsert.isNotEmpty()
-                    if (anySongsFetched) {
-
+                    val indexedSongs = if (songsToInsert.isNotEmpty()) {
                         val allExistingArtists =
                                 if (syncMode == SyncMode.REBUILD) {
                                     emptyList()
@@ -313,10 +338,12 @@ constructor(
                                     musicDao.getAllArtistsListRaw()
                                 }
                         val allExistingAlbums =
-                                if (syncMode == SyncMode.REBUILD) {
+                                if (syncMode == SyncMode.REBUILD ||
+                                    (albumGrouping.requiresReindex && !albumGrouping.byTitle)
+                                ) {
                                     emptyList()
                                 } else {
-                                    musicDao.getAllAlbumsList(emptyList(), false, 0)
+                                    musicDao.getLocalAlbumsForSync()
                                 }
 
                         val existingArtistMetadata =
@@ -328,63 +355,31 @@ constructor(
                         Timber.tag(TAG)
                             .i("Processing ${songsToInsert.size} songs for upsert. Hash: ${songsToInsert.hashCode()}")
 
-                        val (correctedSongs, albums, artists, crossRefs) =
-                                preProcessAndDeduplicateWithMultiArtist(
-                                        songs = songsToInsert,
-                                        artistDelimiters = artistDelimiters,
-                                        wordDelimiters = artistWordDelimiters,
-                                        extractFromTitle = extractArtistsFromTitle,
-                                        groupByAlbumArtist = groupByAlbumArtist,
-                                        existingArtistMetadata = existingArtistMetadata,
-                                        existingAlbums = allExistingAlbums,
-                                        existingArtistIdMap = existingArtistIdMap,
-                                        initialMaxArtistId = maxArtistId
-                                )
-
-                        if (syncMode == SyncMode.REBUILD) {
-                            setProgress(
-                                workDataOf(
-                                    PROGRESS_CURRENT to 0,
-                                    PROGRESS_TOTAL to correctedSongs.size,
-                                    PROGRESS_PHASE to SyncProgress.SyncPhase.SAVING_TO_DATABASE.ordinal
-                                )
-                            )
-                            musicDao.rebuildLocalMusicDataWithCrossRefs(
-                                correctedSongs,
-                                albums,
-                                artists,
-                                crossRefs
-                            )
-                        } else {
-                            setProgress(
-                                workDataOf(
-                                    PROGRESS_CURRENT to 0,
-                                    PROGRESS_TOTAL to correctedSongs.size,
-                                    PROGRESS_PHASE to SyncProgress.SyncPhase.SAVING_TO_DATABASE.ordinal
-                                )
-                            )
-                            musicDao.incrementalSyncMusicData(
-                                    songs = correctedSongs,
-                                    albums = albums,
-                                    artists = artists,
-                                    crossRefs = crossRefs,
-                                    deletedSongIds = emptyList()
-                            )
-                        }
-                    } else if (syncMode == SyncMode.REBUILD) {
+                        preProcessAndDeduplicateWithMultiArtist(
+                            songs = songsToInsert,
+                            artistDelimiters = artistDelimiters,
+                            wordDelimiters = artistWordDelimiters,
+                            extractFromTitle = extractArtistsFromTitle,
+                            groupByAlbumArtist = groupByAlbumArtist,
+                            groupAlbumsByTitle = albumGrouping.byTitle,
+                            includeUnchangedAlbumTracks = !syncPlan.forceProcessAll,
+                            existingArtistMetadata = existingArtistMetadata,
+                            existingAlbums = allExistingAlbums,
+                            existingArtistIdMap = existingArtistIdMap,
+                            initialMaxArtistId = maxArtistId
+                        )
+                    } else null
+                    if (indexedSongs != null || syncMode == SyncMode.REBUILD) {
                         setProgress(
                             workDataOf(
                                 PROGRESS_CURRENT to 0,
-                                PROGRESS_TOTAL to 0,
+                                PROGRESS_TOTAL to (indexedSongs?.songs?.size ?: 0),
                                 PROGRESS_PHASE to SyncProgress.SyncPhase.SAVING_TO_DATABASE.ordinal
                             )
                         )
-                        musicDao.rebuildLocalMusicDataWithCrossRefs(
-                            songs = emptyList(),
-                            albums = emptyList(),
-                            artists = emptyList(),
-                            crossRefs = emptyList()
-                        )
+                    }
+                    if (!persistLocalScan(indexedSongs, syncPlan.resetExistingLocalData, albumGrouping)) {
+                        return@withContext Result.retry()
                     }
 
                     if (rescanRequired) {
@@ -402,6 +397,9 @@ constructor(
                         userPreferencesRepository.setMetadataCharsetRepairVersion(
                             CURRENT_METADATA_CHARSET_REPAIR_VERSION
                         )
+                    }
+                    if (embeddedTagScanRequired) {
+                        userPreferencesRepository.setEmbeddedTagScanVersion(CURRENT_EMBEDDED_TAG_SCAN_VERSION)
                     }
 
                     val endTime = System.currentTimeMillis()
@@ -449,7 +447,7 @@ constructor(
                         var totalScannedCount = 0
 
                         mediaStoreSongIds.chunked(1000).forEach { idBatch ->
-                            val batchEntities = musicDao.getSongsByIdsListSimple(idBatch)
+                            val batchEntities = musicDao.getSongsByIdsForSync(idBatch)
                             val batchSongs =
                                     batchEntities.map { entity ->
                                         Song(
@@ -550,6 +548,31 @@ constructor(
         val crossRefs: List<SongArtistCrossRef>
     )
 
+    private suspend fun persistLocalScan(
+        indexedSongs: MultiArtistProcessResult?,
+        rebuild: Boolean,
+        albumGrouping: LocalAlbumGroupingSettings
+    ): Boolean = localScanCommitMutex.withLock {
+        if (userPreferencesRepository.getLocalAlbumGroupingSettings().indexVersion != albumGrouping.indexVersion) {
+            return@withLock false
+        }
+        if (rebuild) {
+            musicDao.rebuildLocalMusicDataWithCrossRefs(
+                songs = indexedSongs?.songs.orEmpty(),
+                albums = indexedSongs?.albums.orEmpty(),
+                artists = indexedSongs?.artists.orEmpty(),
+                crossRefs = indexedSongs?.crossRefs.orEmpty()
+            )
+        } else if (indexedSongs != null) {
+            val (songs, albums, artists, crossRefs) = indexedSongs
+            musicDao.incrementalSyncMusicData(songs, albums, artists, crossRefs, deletedSongIds = emptyList())
+        }
+        if (albumGrouping.requiresReindex) {
+            userPreferencesRepository.markLocalAlbumGroupingApplied(albumGrouping.indexVersion)
+        }
+        true
+    }
+
     /**
      * Artist tag values only need to live between file scanning and relationship generation.
      * Keeping them beside the entity avoids a database migration or a delimiter-dependent
@@ -557,19 +580,23 @@ constructor(
      */
     private data class ScannedSong(
         val entity: SongEntity,
-        val artistValues: List<String>
+        val artistValues: List<String>,
+        val readEmbeddedTags: Boolean,
+        val previousAlbumId: Long? = null,
     )
 
     /**
      * Process songs with multi-artist support. Splits artist names by delimiters and creates proper
      * cross-references.
      */
-    private fun preProcessAndDeduplicateWithMultiArtist(
+    private suspend fun preProcessAndDeduplicateWithMultiArtist(
             songs: List<ScannedSong>,
             artistDelimiters: List<String>,
             wordDelimiters: List<String> = emptyList(),
             extractFromTitle: Boolean = true,
             groupByAlbumArtist: Boolean,
+            groupAlbumsByTitle: Boolean,
+            includeUnchangedAlbumTracks: Boolean,
             existingArtistMetadata: Map<Long, Pair<String?, String?>>,
             existingAlbums: List<AlbumEntity>,
             existingArtistIdMap: MutableMap<String, Long>,
@@ -581,17 +608,15 @@ constructor(
         
         val allCrossRefs = mutableListOf<SongArtistCrossRef>()
         val artistTrackCounts = mutableMapOf<Long, Int>()
-        val albumMap = mutableMapOf<AlbumGroupingKey, Long>()
+        val fallbackSources = if (groupAlbumsByTitle && songs.any { buildTitleOnlyAlbumKey(it.entity.albumName) == null }) {
+            existingAlbums.filter { buildTitleOnlyAlbumKey(it.title) == null }.map { it.id }.chunked(500)
+                .flatMap { musicDao.getLocalAlbumGroupingSources(it) }
+        } else {
+            emptyList()
+        }
+        val albumIndex = LocalAlbumIndex(existingAlbums, groupAlbumsByTitle, fallbackSources)
         val artistSplitCache = mutableMapOf<String, List<String>>()
         val correctedSongs = ArrayList<SongEntity>(songs.size)
-
-        existingAlbums
-            .sortedBy { it.id }
-            .forEach { album ->
-                buildAlbumGroupingKeys(album).forEach { key ->
-                    albumMap.putIfAbsent(key, album.id)
-                }
-            }
 
         songs.forEach { scannedSong ->
             val song = scannedSong.entity
@@ -649,8 +674,7 @@ constructor(
                 }
             }
 
-            val albumKey = buildAlbumGroupingKey(song)
-            val finalAlbumId = albumMap.getOrPut(albumKey) { song.albumId }
+            val finalAlbumId = albumIndex.idFor(song)
 
             val artistRefsForJson = allArtistsForSong.mapIndexed { index, name ->
                 val normalizedName = name.trim()
@@ -681,7 +705,20 @@ constructor(
             )
         }
         
-        val albumEntities = correctedSongs.groupBy { it.albumId }.map { (catAlbumId, songsInAlbum) ->
+        val songsByAlbum = correctedSongs.groupByTo(linkedMapOf(), SongEntity::albumId)
+        if (groupAlbumsByTitle && includeUnchangedAlbumTracks) {
+            val affectedAlbumIds = songs.mapNotNullTo(songsByAlbum.keys.toMutableSet()) { it.previousAlbumId }
+            val updatedSongIds = correctedSongs.mapTo(hashSetOf(), SongEntity::id)
+            affectedAlbumIds.chunked(500).forEach { albumIds ->
+                musicDao.getLocalSongsByAlbumIdsForSync(albumIds).forEach { storedSong ->
+                    if (storedSong.id !in updatedSongIds) {
+                        songsByAlbum.getOrPut(storedSong.albumId) { mutableListOf() }.add(storedSong)
+                    }
+                }
+            }
+        }
+        val albumEntities = songsByAlbum.map { (catAlbumId, members) ->
+             val songsInAlbum = if (groupAlbumsByTitle) members.sortedBy(SongEntity::id) else members
              val firstSong = songsInAlbum.first()
              val representativeAlbumArt = songsInAlbum.firstNotNullOfOrNull { it.albumArtUriString }
              val determinedAlbumArtist = chooseAlbumDisplayArtist(
@@ -887,6 +924,8 @@ constructor(
             forceProcessAll: Boolean,
             resetExistingLocalData: Boolean,
             metadataCharsetRepairPending: Boolean,
+            embeddedTagScanRequired: Boolean,
+            keepUnchangedAlbumTags: Boolean,
             progressBatchSize: Int,
             onProgress: suspend (current: Int, total: Int, phaseOrdinal: Int) -> Unit
     ): List<ScannedSong> = traceAsyncSection("SyncWorker.fetchMusicFromMediaStore") {
@@ -1011,7 +1050,7 @@ constructor(
                                 )
                         )
                     }
-                }
+                } ?: error("Unable to query MediaStore audio")
 
         if (rawDataList.isEmpty()) {
             Timber.tag(TAG).i("MediaStore cursor produced 0 raw songs after directory filtering")
@@ -1056,7 +1095,7 @@ constructor(
         val songs = mutableListOf<ScannedSong>()
         for (batch in songsToProcess.chunked(200)) {
             val ids = batch.map { it.id }
-            val existingMap = if (resetExistingLocalData) emptyMap() else musicDao.getSongsByIdsListSimple(ids).associateBy { it.id }
+            val existingMap = if (resetExistingLocalData) emptyMap() else musicDao.getSongsByIdsForSync(ids).associateBy { it.id }
             val batchResults = coroutineScope {
                 batch.map { raw ->
                     async {
@@ -1067,10 +1106,15 @@ constructor(
                                     raw = raw,
                                     genreMap = genreMap,
                                     deepScan = deepScan,
+                                    forceEmbeddedTagRead = embeddedTagScanRequired,
                                     forceAlbumArtRefresh = deepScan || localSong != null
                                 )
 
                             val song = if (localSong != null) {
+                                val keepAlbumTags = keepUnchangedAlbumTags &&
+                                    !scannedMediaStoreSong.readEmbeddedTags && raw.dateModified > 0 &&
+                                    localSong.mediaStoreDateModified == raw.dateModified &&
+                                    localSong.filePath == raw.filePath
                                 scannedMediaStoreSong.entity.copy(
                                     dateAdded = if (
                                         localSong.mediaStoreDateAdded > 0 &&
@@ -1080,11 +1124,17 @@ constructor(
                                     } else {
                                         scannedMediaStoreSong.entity.dateAdded
                                     },
-                                    lyrics = localSong.lyrics,
+                                    lyrics = if (scannedMediaStoreSong.readEmbeddedTags) {
+                                        scannedMediaStoreSong.entity.lyrics
+                                    } else {
+                                        localSong.lyrics
+                                    },
                                     title = if (localSong.titleUserEdited) localSong.title else scannedMediaStoreSong.entity.title,
                                     artistName = if (localSong.artistUserEdited) localSong.artistName else scannedMediaStoreSong.entity.artistName,
-                                    albumName = if (localSong.albumUserEdited) localSong.albumName else scannedMediaStoreSong.entity.albumName,
+                                    albumName = if (localSong.albumUserEdited || keepAlbumTags) localSong.albumName else scannedMediaStoreSong.entity.albumName,
+                                    albumArtist = if (keepAlbumTags) localSong.albumArtist else scannedMediaStoreSong.entity.albumArtist,
                                     genre = if (localSong.genreUserEdited) localSong.genre else scannedMediaStoreSong.entity.genre,
+                                    isFavorite = localSong.isFavorite,
                                     trackNumber = if (localSong.trackNumber != 0) localSong.trackNumber else scannedMediaStoreSong.entity.trackNumber,
                                     discNumber = localSong.discNumber ?: scannedMediaStoreSong.entity.discNumber,
                                     albumArtUriString = scannedMediaStoreSong.entity.albumArtUriString,
@@ -1092,7 +1142,7 @@ constructor(
                                     artistUserEdited = localSong.artistUserEdited,
                                     albumUserEdited = localSong.albumUserEdited,
                                     genreUserEdited = localSong.genreUserEdited
-                                )
+                                ).withMusicBrainzIdsFallback(localSong)
                             } else {
                                 scannedMediaStoreSong.entity
                             }
@@ -1107,7 +1157,11 @@ constructor(
                             if (count % progressBatchSize == 0 || count == totalCount) {
                                 onProgress(count, totalCount, SyncProgress.SyncPhase.PROCESSING_FILES.ordinal)
                             }
-                            ScannedSong(entity = song, artistValues = artistValues)
+                            scannedMediaStoreSong.copy(
+                                entity = song,
+                                artistValues = artistValues,
+                                previousAlbumId = localSong?.albumId,
+                            )
                         }
                     }
                 }.awaitAll()
@@ -1126,6 +1180,7 @@ constructor(
             raw: RawSongData,
             genreMap: Map<Long, String>,
             deepScan: Boolean,
+            forceEmbeddedTagRead: Boolean,
             forceAlbumArtRefresh: Boolean
     ): ScannedSong {
         val parentDir = java.io.File(raw.filePath).parent ?: ""
@@ -1157,10 +1212,15 @@ constructor(
         var discNumber = raw.discNumber
         var year = raw.year
         var genre: String? = genreMap[raw.id] ?: raw.genre
+        var embeddedLyrics: String? = null
+        var readEmbeddedTags = false
+        var mbRecordingId: String? = null
+        var mbReleaseId: String? = null
+        var mbArtistId: String? = null
 
         val shouldAugmentMetadata = shouldReadEmbeddedMetadata(
             filePath = raw.filePath,
-            deepScan = deepScan,
+            deepScan = deepScan || forceEmbeddedTagRead,
             rawArtist = raw.artist,
             rawAlbum = raw.album
         )
@@ -1170,6 +1230,8 @@ constructor(
             if (file.exists()) {
                 try {
                     AudioMetadataReader.read(file, readArtwork = false)?.let { meta ->
+                        readEmbeddedTags = true
+                        embeddedLyrics = meta.lyrics
                         if (!meta.title.isNullOrBlank()) title = meta.title
                         if (meta.artists.isNotEmpty()) {
                             artist = meta.artists.first()
@@ -1190,6 +1252,11 @@ constructor(
                         if (meta.trackNumber != null) trackNumber = meta.trackNumber
                         if (meta.discNumber != null) discNumber = meta.discNumber
                         if (meta.year != null) year = meta.year
+                        if (meta.mbRecordingId != null) {
+                            mbRecordingId = meta.mbRecordingId
+                            mbReleaseId = meta.mbReleaseId
+                            mbArtistId = meta.mbArtistId
+                        }
                     }
                 } catch (e: Exception) {
                     Timber.tag(TAG).w(e, "Failed to read metadata via TagLib for ${raw.filePath}")
@@ -1210,6 +1277,7 @@ constructor(
                 albumArtUriString = albumArtUriString,
                 duration = raw.duration,
                 genre = genre,
+                lyrics = embeddedLyrics,
                 filePath = raw.filePath,
                 parentDirectoryPath = parentDir,
                 trackNumber = trackNumber,
@@ -1225,9 +1293,13 @@ constructor(
                 bitrate = audioMetadata?.bitrate,
                 sourceType = SourceType.LOCAL,
                 mediaStoreDateAdded = raw.dateAdded,
-                mediaStoreDateModified = raw.dateModified
+                mediaStoreDateModified = raw.dateModified,
+                mbRecordingId = mbRecordingId,
+                mbReleaseId = mbReleaseId,
+                mbArtistId = mbArtistId
             ),
-            artistValues = artistValues
+            artistValues = artistValues,
+            readEmbeddedTags = readEmbeddedTags
         )
     }
 
@@ -1258,7 +1330,7 @@ constructor(
                 }
                 ids.add(cursor.getLong(idCol))
             }
-        }
+        } ?: error("Unable to query MediaStore audio IDs")
         return ids
     }
 
@@ -1267,6 +1339,7 @@ constructor(
         const val PERIODIC_MAINTENANCE_WORK_NAME =
             "com.lostf1sh.pixelplayeross.data.worker.SyncWorker.PeriodicMaintenance"
         private const val TAG = "SyncWorker"
+        private val localScanCommitMutex = Mutex()
         const val INPUT_FORCE_METADATA = "input_force_metadata"
         const val INPUT_RUN_MAINTENANCE = "input_run_maintenance"
         const val INPUT_SYNC_MODE = "input_sync_mode"
@@ -1284,6 +1357,7 @@ constructor(
         internal const val MAX_PLAYBACK_DEFERRALS = 5
         /** See [UserPreferencesRepository.getMetadataCharsetRepairVersion]. */
         const val CURRENT_METADATA_CHARSET_REPAIR_VERSION = 1
+        const val CURRENT_EMBEDDED_TAG_SCAN_VERSION = 1
 
         const val PROGRESS_CURRENT = "progress_current"
         const val PROGRESS_TOTAL = "progress_total"

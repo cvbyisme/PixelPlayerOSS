@@ -50,6 +50,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.window.core.layout.WindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -81,6 +83,7 @@ import com.lostf1sh.pixelplayeross.data.model.Song
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImage
 import com.lostf1sh.pixelplayeross.presentation.components.SmartImageListTargetSize
 import com.lostf1sh.pixelplayeross.presentation.components.SongInfoBottomSheet
+import com.lostf1sh.pixelplayeross.presentation.components.albumTitleMarquee
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.PlayerViewModel
 import com.lostf1sh.pixelplayeross.presentation.viewmodel.sharedPlayerViewModel
 import com.lostf1sh.pixelplayeross.ui.theme.LocalPixelPlayerDarkTheme
@@ -182,8 +185,10 @@ fun SearchScreen(
     val statusBarTopInset = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
     val systemNavBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val navBarCompactMode by playerViewModel.navBarCompactMode.collectAsStateWithLifecycle()
-    val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode)
-    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode)
+    val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
+    val useNavigationRail = windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+    val bottomBarHeightDp = resolveNavBarOccupiedHeight(systemNavBarInset, navBarCompactMode, useNavigationRail)
+    val bottomGradientHeight = resolveMainScreenBottomGradientHeight(navBarCompactMode, useNavigationRail)
     var showPlaylistBottomSheet by remember { mutableStateOf(false) }
     var playlistSheetSongs by remember { mutableStateOf<ImmutableList<Song>>(persistentListOf()) }
     val context = LocalContext.current
@@ -374,7 +379,9 @@ fun SearchScreen(
                     DockedSearchBar(
                         inputField = {
                             SearchBarDefaults.InputField(
-                                modifier = Modifier.focusRequester(searchInputFocusRequester),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .focusRequester(searchInputFocusRequester),
                                 query = searchQuery,
                                 onQueryChange = {
                                     searchQuery = it
@@ -431,6 +438,7 @@ fun SearchScreen(
                         expanded = false,
                         onExpandedChange = {},
                         modifier = Modifier
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(searchbarCornerRadius)),
                         colors = SearchBarDefaults.colors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
@@ -547,6 +555,7 @@ fun SearchScreen(
                                     SearchFilterChip(SearchFilterType.ALBUMS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.ARTISTS, currentFilter, playerViewModel)
                                     SearchFilterChip(SearchFilterType.PLAYLISTS, currentFilter, playerViewModel)
+                                    SearchFilterChip(SearchFilterType.LYRICS, currentFilter, playerViewModel)
                                 }
                             }
                         ) {
@@ -664,13 +673,15 @@ fun SearchScreen(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .height(bottomGradientHeight)
-                .background(brush = bottomGradientBrush)
-        )
+        if (bottomGradientHeight > 0.dp) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .height(bottomGradientHeight)
+                    .background(brush = bottomGradientBrush)
+            )
+        }
     }
 
     if (showSongInfoBottomSheet && selectedSongForInfo != null) {
@@ -1500,8 +1511,9 @@ fun SearchResultAlbumItem(
                         text = album.title,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
+                        modifier = Modifier.albumTitleMarquee(),
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        softWrap = false
                     )
                     Text(
                         text = album.artist,
@@ -1845,4 +1857,5 @@ private fun searchFilterLabelRes(filterType: SearchFilterType): Int = when (filt
     SearchFilterType.ALBUMS -> R.string.library_tab_albums
     SearchFilterType.ARTISTS -> R.string.library_tab_artists
     SearchFilterType.PLAYLISTS -> R.string.library_tab_playlists
+    SearchFilterType.LYRICS -> R.string.lyrics
 }
