@@ -1301,11 +1301,13 @@ class DualPlayerEngine @Inject constructor(
                     // Whether a track gets a direct thread is decided by the platform audio
                     // policy given the device's descriptors, which a plain app cannot override.
                     // DirectOutputProbe measures what the platform actually granted.
-                    return super.buildAudioSink(
-                        context,
-                        false,
-                        enableAudioOutputPlaybackParams
-                    )
+                    return requireNotNull(
+                        super.buildAudioSink(
+                            context,
+                            false,
+                            enableAudioOutputPlaybackParams
+                        )
+                    ) { "Media3 did not create its default AudioSink" }
                 }
                 val audioProcessors = buildAudioProcessors()
                 if (audioProcessors.isEmpty()) {
