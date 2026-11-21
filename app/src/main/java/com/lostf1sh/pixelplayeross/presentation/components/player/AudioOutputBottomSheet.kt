@@ -124,9 +124,12 @@ internal fun AudioOutputBottomSheet(
                 onSelectOutput = viewModel::selectOutput
             )
 
-            if (liveAudioFormat != null) {
+            // A delegated property can't be smart-cast, so snapshot it into a
+            // local first; the null check then applies to that local.
+            val snapshot = liveAudioFormat
+            if (snapshot != null) {
                 AudioQualitySection(
-                    snapshot = liveAudioFormat,
+                    snapshot = snapshot,
                     decoder = liveDecoder,
                     isOffloadActive = isOffloadActive,
                 )
