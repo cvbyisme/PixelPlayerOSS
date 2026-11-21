@@ -5,7 +5,7 @@
 <h1 align="center">PixelPlayerOSS · 个人修改版</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.6.3--cvby-4FF0D0?style=for-the-badge" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.7.0--cvby-4FF0D0?style=for-the-badge" alt="Version">
   <img src="https://img.shields.io/badge/Android-11%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white" alt="Android 11+">
   <img src="https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge" alt="GPLv3">
 </p>
@@ -25,7 +25,7 @@
 这个分支（`personal-cvby`）在上面加了一些**外观自定义**的小功能，代码改动集中在主题层与播放页，播放核心没动。
 
 - 包名：`com.lostf1sh.pixelplayeross`
-- 版本：`0.6.3-cvby`
+- 版本：`0.7.0-cvby`
 - 分支：`personal-cvby`（`main` 保持与上游同步）
 
 > 所有 fork 专属功能集中在 **设置 → cvby 自定义**（外观与播控 / 自定义背景 / 音频引擎 / 网络 四段），上游页面里不再混入这些条目。
@@ -56,6 +56,39 @@
 - 播放页顶部音量数字，变化时带一点点动画
 - 关于页有个人信息卡（维护者、来源、本版改动清单）
 - 移除了页面级背景遮罩，遮罩统一交给壁纸层，避免叠加过暗
+
+## 更新日志
+
+### 0.7.0-cvby
+
+音频链路与播放页这一版改动比较多，重点是把「实际在放什么」显示准确，以及让音量能真正细调。
+
+**音频质量显示**
+
+- 播放页顶部新增音质徽章，实时显示当前输出的采样率、位深与 Direct / Mixer 通路
+- 徽章不再把 DAC 回执的最高档位当成输出采样率。之前用 96 kHz 音源时显示「→ 384 kHz」，看着像升频，其实输出一直是源采样率；现在探针新增 `reportedSampleRate`，只有直通真正被接受时才报数字
+- 探针缓存 key 加入编码，避免同一采样率下不同编码复用错误结果
+- 新增「高音质模式」开关，可在输出设备页直接切换
+
+**降采样质量**
+
+- 需要把高采样率降到设备档位时，改为一阶 IIR 抗混叠低通（通带比 0.45），不再直接丢样本，减少高频折叠失真
+
+**播放页与输出设备页**
+
+- 音质读数从播放页整体移到「音频输出」二级页顶部的音质卡片，播放页不再拥挤
+- 播放页音量数字现在可点击，打开独立的音量细调面板：按系统真实档位（`STREAM_MUSIC` 的 min/max）拖动吸附、单步加减、静音、显示「第 N / 总档」
+- 音量面板走 `setStreamVolume(flags = 0)`，避免系统音量浮层挡住滑杆；同时监听 `VOLUME_CHANGED_ACTION`，用音量键或别处改音量时面板会同步
+
+**修复**
+
+- 播放中切换输出设备不生效：补上 `AudioDeviceCallback` 监听，设备增删时重建输出
+- 歌曲结尾偶发残留一小段静音或跳帧：修掉 `queueEndOfStream` 后尾部残帧未消费的问题
+- 自定义背景图偶发丢失：修正 staging 写入时序
+- 背景图内存占用偏高：Coil 请求加 `size()` 限制解码尺寸
+- `HiFiCapabilityChecker` 并发竞争：加 `@Synchronized`
+- `super.buildAudioSink` 返回值改为 `requireNotNull` 快速失败，避免空指针在更远处炸
+- 清理 12 条重复 import
 
 ## 截图
 

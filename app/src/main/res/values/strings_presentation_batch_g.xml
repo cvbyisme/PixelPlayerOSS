@@ -487,6 +487,15 @@ Backslash (\) can be used to escape character delimiters.</string>
 
     <string name="presentation_batch_g_changelog_sec_whats_new">What\'s new</string>
     <string name="presentation_batch_g_changelog_sec_cvby_cumulative">Carried over from earlier personal builds</string>
+    <string-array name="presentation_batch_g_changelog_cvby_v070_whats_new">
+        <item>New audio quality badge shows what is actually being output: sample rate, bit depth and the Direct/Mixer path.</item>
+        <item>The badge no longer reports a DAC\'s maximum rate as the output rate. With a 96 kHz track it used to read \"→ 384 kHz\", which looked like upsampling even though playback always ran at the source rate.</item>
+        <item>New high quality mode switch on the output device page.</item>
+        <item>Downsampling now uses a first-order IIR anti-aliasing low-pass instead of dropping samples, so there is less high frequency aliasing.</item>
+        <item>The audio readout moved from the player into the audio output sheet, so the player page is no longer crowded.</item>
+        <item>The volume number on the player page is tappable now and opens a fine volume panel: snaps to the real system steps, plus step up/down, mute and a \"step N of M\" readout.</item>
+        <item>Fixed output device changes not taking effect during playback, a leftover tail frame at end of stream, and a background image staging race.</item>
+    </string-array>
     <string-array name="presentation_batch_g_changelog_cvby_v063_whats_new">
         <item>Custom background (image, blur, dim, page/card opacity) moved out of Appearance into the cvby tweaks page, next to the other fork-only settings.</item>
         <item>The blurred player cover background and the player background scrim moved to cvby tweaks > Look &amp; player.</item>
