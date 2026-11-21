@@ -415,7 +415,7 @@ class MainActivity : ComponentActivity() {
                 themePreset = themePreset,
                 appBackground = appBackground,
                 playerUiConfig = playerUiConfig,
-                libraryBackgroundColor = libraryBackgroundColor?.let { Color(it) }
+                libraryBackgroundColor = libraryBackgroundColor?.let { Color(it) },
                 interfaceAppearance = interfaceAppearance
             ) {
                 var contentVisible by remember { mutableStateOf(false) }

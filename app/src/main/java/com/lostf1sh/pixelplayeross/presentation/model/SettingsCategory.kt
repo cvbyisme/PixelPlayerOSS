@@ -44,6 +44,7 @@ enum class SettingsCategory(
         titleRes = R.string.settings_category_cvby_title,
         subtitleRes = R.string.settings_category_cvby_subtitle,
         icon = Icons.Rounded.Tune
+    ),
     EQUALIZER(
         id = "equalizer",
         titleRes = R.string.settings_category_equalizer_title,

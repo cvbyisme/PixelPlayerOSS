@@ -34,6 +34,8 @@ class ThemePreferencesRepository @Inject constructor(
         val PLAYER_BG_SCRIM = intPreferencesKey("player_bg_scrim_v1")
         val PLAYER_CONTROLS_STYLE = stringPreferencesKey("player_controls_style_v1")
         val PLAYER_CONTROLS_SHAPE = stringPreferencesKey("player_controls_shape_v1")
+        val USE_SYSTEM_FONT = booleanPreferencesKey("use_system_font")
+        val INTERFACE_SCALE = intPreferencesKey("interface_scale_percent")
         val ANIMATED_SPLASH_ENABLED = booleanPreferencesKey("animated_splash_enabled_v1")
         val LIBRARY_BACKGROUND_COLOR = intPreferencesKey("library_background_color_v1")
 
@@ -91,8 +93,6 @@ class ThemePreferencesRepository @Inject constructor(
                 ?.takeIf { it in PlayerControlsShape.values }
                 ?: PlayerControlsShape.DEFAULT
         )
-        val USE_SYSTEM_FONT = booleanPreferencesKey("use_system_font")
-        val INTERFACE_SCALE = intPreferencesKey("interface_scale_percent")
     }
 
     val appThemeModeFlow: Flow<String> = dataStore.data.map { preferences ->
