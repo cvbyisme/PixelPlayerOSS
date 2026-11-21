@@ -523,7 +523,9 @@ class DualPlayerEngine @Inject constructor(
                 return@launch
             }
             _audioFormatSnapshot.value = current.copy(
-                probedOutputRate = probe.actualSampleRate,
+                // reportedSampleRate is 0 when the platform refused the request; storing the
+                // echo of a refused rate is what made 96 kHz sources show up as 384 kHz.
+                probedOutputRate = probe.reportedSampleRate,
                 probeAcceptedSourceRate = probe.directGranted
             )
         }

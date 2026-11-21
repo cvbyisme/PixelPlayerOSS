@@ -32,12 +32,32 @@ object DirectOutputProbe {
 
     data class Result(
         val directGranted: Boolean,
+        /**
+         * The rate the platform actually plays this track at.
+         *
+         * Only meaningful when [directGranted] is true, i.e. the platform echoed back exactly the
+         * rate that was requested. When it did not, this holds the *rejected* request's echo,
+         * which describes a static AudioTrack slot and NOT what the mixer is running at -- some
+         * devices answer a 96 kHz request with 384 kHz (their top PCM slot), and reporting that
+         * number as an output rate is what made the badge claim "96 kHz source, 384 kHz output".
+         * Read [reportedSampleRate] instead of this field for display purposes.
+         */
         val actualSampleRate: Int,
         val actualEncoding: Int,
         val fellBackToMixer: Boolean,
         val deviceName: String?,
         val rejectionReason: String?
     ) {
+        /**
+         * Rate worth showing to a user, or 0 when the probe result must not be trusted.
+         *
+         * A rejected request tells us the track is going through the mixer, but it tells us
+         * nothing about the mixer's rate (a plain app cannot read the HAL clock). Returning 0
+         * keeps the badge honest instead of printing the platform's echo of a rejected value.
+         */
+        val reportedSampleRate: Int
+            get() = if (directGranted) actualSampleRate else 0
+
         val encodingLabel: String
             get() = when (actualEncoding) {
                 AudioFormat.ENCODING_PCM_16BIT -> "16-bit"
@@ -47,12 +67,22 @@ object DirectOutputProbe {
                 else -> "unknown"
             }
 
+        /** Log-friendly one-liner; never prints a rejected request's echo as an output rate. */
         val summary: String
-            get() = "${actualSampleRate / 1000f} kHz / $encodingLabel  " +
-                if (directGranted) "[DIRECT]" else "[MIXER]"
+            get() {
+                val rate = reportedSampleRate
+                val rateLabel = if (rate > 0) "${rate / 1000f} kHz / " else ""
+                return "$rateLabel$encodingLabel  " + if (directGranted) "[DIRECT]" else "[MIXER]"
+            }
     }
 
-    private val cache = HashMap<Int, Result>()
+
+    // Keyed by rate *and* encoding: a 96 kHz result for 24-bit packed must not be reused for
+    // a float request, since the platform can accept one and refuse the other.
+    private val cache = HashMap<Long, Result>()
+
+    private fun cacheKey(sampleRate: Int, encoding: Int): Long =
+        (sampleRate.toLong() shl 32) or (encoding.toLong() and 0xffffffffL)
 
     @Synchronized
     fun probe(
@@ -60,8 +90,9 @@ object DirectOutputProbe {
         sampleRate: Int,
         encoding: Int = AudioFormat.ENCODING_PCM_24BIT_PACKED
     ): Result {
-        cache[sampleRate]?.let { return it }
-        return runProbe(context, sampleRate, encoding).also { cache[sampleRate] = it }
+        val key = cacheKey(sampleRate, encoding)
+        cache[key]?.let { return it }
+        return runProbe(context, sampleRate, encoding).also { cache[key] = it }
     }
 
     @Synchronized
