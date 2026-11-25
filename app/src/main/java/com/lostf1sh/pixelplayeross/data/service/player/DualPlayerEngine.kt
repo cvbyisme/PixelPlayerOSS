@@ -320,7 +320,13 @@ class DualPlayerEngine @Inject constructor(
     private var surroundDownmixEnabled = false
 
     private fun buildAudioProcessors(): List<AudioProcessor> = buildList {
-        if (hiResSampleRateCapEnabled) add(HiResSampleRateCapAudioProcessor())
+        // Float output makes DefaultAudioSink skip its AudioProcessor chain for hi-res input
+        // (see EqualizerAudioSink), so the anti-aliasing decimator can never run in PCM_FLOAT /
+        // bit-perfect mode. Attaching it there is a dead entry that still gets reconfigured on
+        // every crossfade AudioTrack rebuild, which stuttered the fade-out on high-quality mode.
+        if (hiResSampleRateCapEnabled && !audioOutputMode.usesFloatOutput) {
+            add(HiResSampleRateCapAudioProcessor())
+        }
         if (surroundDownmixEnabled) add(SurroundDownmixProcessor())
     }
 
@@ -1386,10 +1392,12 @@ class DualPlayerEngine @Inject constructor(
                 } else if (audioProcessors.isEmpty()) {
                     // cvby: nothing to process -> keep the stock sink so the HAL can take the
                     // track through COMPRESS_OFFLOAD and the CPU can sleep between buffers.
+                    // Respect the mode's float flag instead of hard-coding false: PCM_FLOAT (the
+                    // high-quality mode path) must keep float output even with no processors.
                     requireNotNull(
                         super.buildAudioSink(
                             context,
-                            false,
+                            outputMode.usesFloatOutput,
                             enableAudioOutputPlaybackParams
                         )
                     ) { "Media3 did not create its default AudioSink" }
